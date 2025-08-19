@@ -30,7 +30,7 @@
             font-weight: 700;
         }
         
-        /* Navbar mejorada */
+        
         .navbar {
             background-color: var(--color-negro) !important;
             padding: 15px 0;
@@ -61,8 +61,7 @@
             margin-right: 8px;
         }
         
-        /* Hero Section rediseñada */
-        .hero-section {
+                .hero-section {
             background: linear-gradient(rgba(0, 0, 0, 0.7), rgba(0, 0, 0, 0.7)), 
                         url('assets/img/campus.png') no-repeat center center/cover;
             height: 80vh;
@@ -124,7 +123,7 @@
             color: var(--color-negro);
         }
         
-        /* Features Section mejorada */
+        
         .features-section {
             padding: 80px 0;
             background-color: #f8f9fa;
@@ -189,7 +188,7 @@
             color: var(--color-gris);
         }
         
-        /* Footer mejorado */
+        
         .footer {
             background: linear-gradient(to right, var(--color-negro), #343a40);
             color: var(--color-blanco);
@@ -241,7 +240,7 @@
             to { opacity: 1; transform: translateY(0); }
         }
         
-        /* Responsive */
+        /* Responsividad */
         @media (max-width: 768px) {
             .hero-title {
                 font-size: 2.5rem;
@@ -290,7 +289,7 @@
         </div>
     </nav>
 
-    <!-- Hero Section -->
+    
     <section class="hero-section">
         <div class="container">
             <div class="row justify-content-center">
@@ -310,7 +309,7 @@
         </div>
     </section>
 
-    <!-- Features Section -->
+    
     <section class="features-section">
         <div class="container">
             <h2 class="text-center section-title">Nuestras Ventajas</h2>
