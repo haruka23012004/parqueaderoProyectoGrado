@@ -9,7 +9,7 @@ require_once __DIR__.'/../includes/conexion.php';
 
 // Verificar autenticación y rol
 if (!estaAutenticado() || $_SESSION['rol_nombre'] !== 'administrador_principal') {
-    header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+    header('Location: ../acceso/login.php');
     exit();
 }
 
