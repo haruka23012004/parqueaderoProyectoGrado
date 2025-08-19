@@ -14,7 +14,7 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] !== 'administrador_principal')
 }
 
 // Obtener estadísticas para el dashboard
-$conexion = $conn; // Asumiendo que tu conexión está en $conn
+$conexion = $conn;
 
 // Contar solicitudes pendientes
 $query_pendientes = "SELECT COUNT(*) as total FROM usuarios_parqueadero WHERE estado = 'pendiente'";
@@ -135,7 +135,7 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
                     <div class="container-fluid">
                         <span class="navbar-brand">Panel de Administración</span>
                         <div class="d-flex">
-                            <a href="/PARQUEADEROPROYECTOGRADO/acceso/logout.php" class="btn btn-outline-danger">
+                            <a href="../acceso/logout.php" class="btn btn-outline-danger">
                                 <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
                             </a>
                         </div>
@@ -190,7 +190,7 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
                                 </div>
                                 <div class="card-body">
                                     <div class="d-flex gap-3">
-                                        <a href="/PARQUEADEROPROYECTOGRADO/registro_empleados.php" class="btn btn-primary">
+                                        <a href="../registro_empleados.php" class="btn btn-primary">
                                             <i class="bi bi-person-plus"></i> Registrar Nuevo Empleado
                                         </a>
                                         <a href="../admin/solicitudes_pendientes.php" class="btn btn-warning">
