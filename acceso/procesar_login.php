@@ -9,7 +9,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     setMensaje('danger', 'Método no permitido');
-    header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+    header('Location: acceso/login.php');
     exit();
 }
 
@@ -18,7 +18,7 @@ $password = $_POST['password'] ?? '';
 
 if (empty($usuario) || empty($password)) {
     setMensaje('danger', 'Usuario y contraseña son obligatorios');
-    header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+    header('Location: acceso/login.php');
     exit();
 }
 
@@ -37,7 +37,7 @@ try {
 
     if (mysqli_num_rows($result) === 0) {
         setMensaje('danger', 'Usuario o contraseña incorrectos');
-        header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+        header('Location: acceso/login.php');
         exit();
     }
 
@@ -45,7 +45,7 @@ try {
 
     if (!password_verify($password, $empleado['password_hash'])) {
         setMensaje('danger', 'Usuario o contraseña incorrectos');
-        header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+        header('Location: acceso/login.php');
         exit();
     }
 
@@ -56,7 +56,7 @@ try {
             default => 'No puedes iniciar sesión con este estado'
         };
         setMensaje('danger', $mensaje);
-        header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+        header('Location: acceso/login.php');
         exit();
     }
 
@@ -71,7 +71,7 @@ try {
 } catch (Exception $e) {
     error_log('Error en login: ' . $e->getMessage());
     setMensaje('danger', 'Error al procesar la solicitud');
-    header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+    header('Location: acceso/login.php');
     exit();
 }
 ?>
