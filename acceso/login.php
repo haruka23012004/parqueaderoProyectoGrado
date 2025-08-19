@@ -61,7 +61,7 @@ function mostrarMensaje() {
         
         <?php mostrarMensaje(); ?>
         
-        <form action="/PARQUEADEROPROYECTOGRADO/acceso/procesar_login.php" method="POST">
+        <form action="acceso/procesar_login.php" method="POST">
             <div class="mb-3">
                 <label for="usuario" class="form-label">Usuario</label>
                 <input type="text" class="form-control" id="usuario" name="usuario" required autofocus>
@@ -74,7 +74,7 @@ function mostrarMensaje() {
                 <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
             </div>
             <div class="text-center mt-3">
-                <a href="/PARQUEADEROPROYECTOGRADO/acceso/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
+                <a href="acceso/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
             </div>
             <div class="text-center mt-3">
                 <a href="../index.php">Inicio</a>
