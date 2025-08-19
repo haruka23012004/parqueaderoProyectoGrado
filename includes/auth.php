@@ -10,15 +10,15 @@ function estaAutenticado() {
 
 function redirigirSegunRol() {
     if (!estaAutenticado()) {
-        header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+        header('Location: acceso/login.php');
         exit();
     }
     
     $rol = $_SESSION['rol_nombre'] ?? '';
     $paginas = [
-        'administrador_principal' => '/PARQUEADEROPROYECTOGRADO/paneles/administrador.php',
-        'empleado_secundario' => '/PARQUEADEROPROYECTOGRADO/paneles/empleado.php',
-        'vigilante' => '/PARQUEADEROPROYECTOGRADO/paneles/vigilante.php'
+        'administrador_principal' => '../paneles/administrador.php',
+        'empleado_secundario' => '../paneles/empleado.php',
+        'vigilante' => '../paneles/vigilante.php'
     ];
     
     if (isset($paginas[$rol])) {
@@ -26,7 +26,7 @@ function redirigirSegunRol() {
         exit();
     }
     
-    header('Location: /PARQUEADEROPROYECTOGRADO/acceso/logout.php');
+    header('Location: acceso/logout.php');
     exit();
 }
 

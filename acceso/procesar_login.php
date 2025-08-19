@@ -1,4 +1,5 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/conexion.php';
 
 // Iniciar sesión si no está iniciada
@@ -6,15 +7,9 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-// Función para establecer mensajes
-function setMensaje($tipo, $texto) {
-    $_SESSION['mensaje'] = $texto;
-    $_SESSION['tipo_mensaje'] = $tipo;
-}
-
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     setMensaje('danger', 'Método no permitido');
-    header('Location: login.php');
+    header('Location: acceso/login.php');
     exit();
 }
 
@@ -23,7 +18,7 @@ $password = $_POST['password'] ?? '';
 
 if (empty($usuario) || empty($password)) {
     setMensaje('danger', 'Usuario y contraseña son obligatorios');
-    header('Location: login.php');
+    header('Location: acceso/login.php');
     exit();
 }
 
@@ -42,7 +37,7 @@ try {
 
     if (mysqli_num_rows($result) === 0) {
         setMensaje('danger', 'Usuario o contraseña incorrectos');
-        header('Location: login.php');
+        header('Location: acceso/login.php');
         exit();
     }
 
@@ -50,16 +45,18 @@ try {
 
     if (!password_verify($password, $empleado['password_hash'])) {
         setMensaje('danger', 'Usuario o contraseña incorrectos');
-        header('Location: login.php');
+        header('Location: acceso/login.php');
         exit();
     }
 
     if ($empleado['estado'] !== 'activo') {
-        $mensaje = $empleado['estado'] === 'inactivo' ? 'Tu cuenta está inactiva' : 
-                  ($empleado['estado'] === 'suspendido' ? 'Tu cuenta está suspendida' : 
-                  'No puedes iniciar sesión con este estado');
+        $mensaje = match($empleado['estado']) {
+            'inactivo' => 'Tu cuenta está inactiva',
+            'suspendido' => 'Tu cuenta está suspendida',
+            default => 'No puedes iniciar sesión con este estado'
+        };
         setMensaje('danger', $mensaje);
-        header('Location: login.php');
+        header('Location: acceso/login.php');
         exit();
     }
 
@@ -68,13 +65,13 @@ try {
     $_SESSION['rol_nombre'] = $empleado['rol_nombre'];
     $_SESSION['nivel_permiso'] = $empleado['nivel_permiso'];
 
-    // Redirigir al panel de administrador
-    header('Location: ../paneles/administrador.php');
-    exit();
+    // Redirigir según rol
+    redirigirSegunRol();
 
 } catch (Exception $e) {
     error_log('Error en login: ' . $e->getMessage());
     setMensaje('danger', 'Error al procesar la solicitud');
-    header('Location: login.php');
+    header('Location: acceso/login.php');
     exit();
 }
+?>
