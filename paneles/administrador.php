@@ -53,7 +53,7 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
             box-shadow: 0 10px 15px rgba(0, 0, 0, 0.1);
         }
         .user-info {
-            background-color: #f8f9fa;
+            background-color:rgb(16, 17, 17);
             border-radius: 5px;
             padding: 15px;
         }

@@ -1,15 +1,10 @@
 <?php
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../includes/conexion.php';
 
 // Iniciar sesión si no está iniciada
 if (session_status() === PHP_SESSION_NONE) {
     session_start();
-}
-
-// Función para establecer mensajes
-function setMensaje($tipo, $texto) {
-    $_SESSION['mensaje'] = $texto;
-    $_SESSION['tipo_mensaje'] = $tipo;
 }
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -55,9 +50,11 @@ try {
     }
 
     if ($empleado['estado'] !== 'activo') {
-        $mensaje = $empleado['estado'] === 'inactivo' ? 'Tu cuenta está inactiva' : 
-                  ($empleado['estado'] === 'suspendido' ? 'Tu cuenta está suspendida' : 
-                  'No puedes iniciar sesión con este estado');
+        $mensaje = match($empleado['estado']) {
+            'inactivo' => 'Tu cuenta está inactiva',
+            'suspendido' => 'Tu cuenta está suspendida',
+            default => 'No puedes iniciar sesión con este estado'
+        };
         setMensaje('danger', $mensaje);
         header('Location: acceso/login.php');
         exit();
@@ -68,9 +65,8 @@ try {
     $_SESSION['rol_nombre'] = $empleado['rol_nombre'];
     $_SESSION['nivel_permiso'] = $empleado['nivel_permiso'];
 
-    // Redirigir al panel principal después del login exitoso
-    header('Location: paneles/administrador.php');
-    exit();
+    // Redirigir según rol
+    redirigirSegunRol();
 
 } catch (Exception $e) {
     error_log('Error en login: ' . $e->getMessage());
@@ -78,3 +74,4 @@ try {
     header('Location: acceso/login.php');
     exit();
 }
+?>

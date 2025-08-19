@@ -55,7 +55,7 @@ function mostrarMensaje() {
 <body>
     <div class="login-container">
         <div class="login-logo">
-            <img src="assets/img/logoUniguajira.png" alt="Logo Parqueadero">
+            <img src="../assets/img/logoUniguajira.png" alt="Logo Parqueadero">
             <h3 class="mt-3">Sistema de Parqueadero</h3>
         </div>
         
@@ -74,7 +74,7 @@ function mostrarMensaje() {
                 <button type="submit" class="btn btn-primary">Iniciar Sesión</button>
             </div>
             <div class="text-center mt-3">
-                <a href="acceso/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
+                <a href="recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
             </div>
             <div class="text-center mt-3">
                 <a href="../index.php">Inicio</a>
