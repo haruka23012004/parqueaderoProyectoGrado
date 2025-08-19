@@ -41,7 +41,7 @@ if (estaAutenticado()) {
     <div class="container">
         <div class="login-container">
             <div class="login-logo">
-                <img src="/PARQUEADEROPROYECTOGRADO/assets/img/logo.png" alt="Logo Parqueadero">
+                <img src="/PARQUEADEROPROYECTOGRADO/assets/img/logoUniguajira.png" alt="Logo Parqueadero">
                 <h3 class="mt-3">Sistema de Parqueadero</h3>
             </div>
             
@@ -61,6 +61,9 @@ if (estaAutenticado()) {
                 </div>
                 <div class="text-center mt-3">
                     <a href="/PARQUEADEROPROYECTOGRADO/acceso/recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
+                </div>
+                <div class="text-center mt-3">
+                    <a href="../index.php">Inicio</a>
                 </div>
             </form>
         </div>
