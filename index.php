@@ -301,7 +301,7 @@
                         <a href="registro.php" class="btn btn-hero">
                             <i class="fas fa-car me-2"></i> Solicitar acceso
                         </a>
-                        <a href="/PARQUEADEROPROYECTOGRADO/acceso/login.php" class="btn btn-outline-hero">
+                        <a href="acceso/login.php" class="btn btn-outline-hero">
                             <i class="fas fa-sign-in-alt me-2"></i> Acceso usuarios
                         </a>
                     </div>
