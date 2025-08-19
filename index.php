@@ -283,7 +283,7 @@
                         <a class="nav-link" href="registro.php"><i class="fas fa-user-plus"></i> Registro</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="./acceso/login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
+                        <a class="nav-link" href="acceso/login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
                     </li>
                 </ul>
             </div>
