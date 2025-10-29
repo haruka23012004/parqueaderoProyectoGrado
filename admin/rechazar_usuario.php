@@ -4,7 +4,7 @@ require '../includes/conexion.php';
 
 // Verificar que sea administrador 
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'administrador_principal') {
-    header('Location: /PARQUEADEROPROYECTOGRADO/paneles/administrador.php');
+    header('Location: ../paneles/administrador.php');
     exit();
 }
 
@@ -17,7 +17,7 @@ $usuario_id = $_GET['id'];
 
 // Verificar que el usuario existe y está pendiente
 $check_query = "SELECT * FROM usuarios_parqueadero WHERE id = ? AND estado = 'pendiente'";
-$check_stmt = $conexion->prepare($check_query);
+$check_stmt = $conn->prepare($check_query);
 $check_stmt->bind_param("i", $usuario_id);
 $check_stmt->execute();
 $usuario = $check_stmt->get_result()->fetch_assoc();
@@ -33,10 +33,11 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
     
     $update_query = "UPDATE usuarios_parqueadero 
                     SET estado = 'rechazado', 
-                        observaciones = ?
+                        observaciones = ?,
+                        fecha_aprobacion = NOW()
                     WHERE id = ?";
     
-    $update_stmt = $conexion->prepare($update_query);
+    $update_stmt = $conn->prepare($update_query);
     $update_stmt->bind_param("si", $observaciones, $usuario_id);
     
     if ($update_stmt->execute()) {

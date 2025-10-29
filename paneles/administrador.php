@@ -31,6 +31,19 @@ $hoy = date('Y-m-d');
 $query_vehiculos_hoy = "SELECT COUNT(*) as total FROM registros_acceso WHERE DATE(fecha_hora) = '$hoy'";
 $result_vehiculos_hoy = $conexion->query($query_vehiculos_hoy);
 $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
+
+// CONTAR TOTAL DE VEHÍCULOS REGISTRADOS EN EL SISTEMA
+$query_total_vehiculos = "SELECT COUNT(*) as total FROM vehiculos";
+$result_total_vehiculos = $conexion->query($query_total_vehiculos);
+$total_vehiculos = $result_total_vehiculos->fetch_assoc()['total'];
+
+// Opcional: Contar vehículos por tipo
+$query_vehiculos_tipo = "SELECT tipo, COUNT(*) as cantidad FROM vehiculos GROUP BY tipo";
+$result_vehiculos_tipo = $conexion->query($query_vehiculos_tipo);
+$vehiculos_por_tipo = [];
+while ($row = $result_vehiculos_tipo->fetch_assoc()) {
+    $vehiculos_por_tipo[$row['tipo']] = $row['cantidad'];
+}
 ?>
 
 <!DOCTYPE html>
@@ -77,6 +90,14 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
             top: 5px;
             right: 5px;
         }
+        .vehicle-type-badge {
+            font-size: 0.75rem;
+            margin: 2px;
+        }
+        .stats-small {
+            font-size: 0.85rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -108,6 +129,11 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
                         <li class="nav-item">
                             <a href="../admin/usuarios_aprobados.php" class="nav-link">
                                 <i class="bi bi-people"></i> Usuarios Aprobados
+                            </a>
+                        </li>
+                        <li class="nav-item">
+                            <a href="../admin/usuarios_rechazados.php" class="nav-link">
+                                <i class="bi bi-person-x"></i> Usuarios Rechazados
                             </a>
                         </li>
                         <li class="nav-item">
@@ -152,7 +178,7 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
 
                     <!-- Cards de Resumen -->
                     <div class="row g-4">
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card card-dashboard bg-primary text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Usuarios Registrados</h5>
@@ -161,21 +187,24 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4">
-                            <div class="card card-dashboard bg-success text-white">
-                                <div class="card-body">
-                                    <h5 class="card-title">Vehículos Hoy</h5>
-                                    <p class="card-text display-5"><?= $vehiculos_hoy ?></p>
-                                    <a href="#" class="text-white">Ver reporte</a>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4">
+                        <div class="col-md-3">
                             <div class="card card-dashboard bg-warning text-dark">
                                 <div class="card-body">
                                     <h5 class="card-title">Solicitudes Pendientes</h5>
                                     <p class="card-text display-5"><?= $solicitudes_pendientes ?></p>
                                     <a href="../admin/solicitudes_pendientes.php" class="text-dark">Revisar</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="card card-dashboard bg-info text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Total Vehículos</h5>
+                                    <p class="card-text display-5"><?= $total_vehiculos ?></p>
+                                    <div class="stats-small">
+                                        
+                                    </div>
+                                    <a href="../admin/vehiculos.php" class="text-white">Ver vehículos</a>
                                 </div>
                             </div>
                         </div>
@@ -199,6 +228,44 @@ $vehiculos_hoy = $result_vehiculos_hoy->fetch_assoc()['total'];
                                         <a href="#" class="btn btn-outline-info">
                                             <i class="bi bi-graph-up"></i> Ver Estadísticas
                                         </a>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sección de Estadísticas de Vehículos -->
+                    <div class="row mt-4">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header">
+                                    <h5><i class="bi bi-car-front"></i> Estadísticas de Vehículos</h5>
+                                </div>
+                                <div class="card-body">
+                                    <div class="row">
+                                        <div class="col-md-6">
+                                            <h6>Distribución por Tipo</h6>
+                                            <?php if (!empty($vehiculos_por_tipo)): ?>
+                                                <ul class="list-group">
+                                                    <?php foreach ($vehiculos_por_tipo as $tipo => $cantidad): ?>
+                                                        <li class="list-group-item d-flex justify-content-between align-items-center">
+                                                            <?= ucfirst($tipo) ?>
+                                                            <span class="badge bg-primary rounded-pill"><?= $cantidad ?></span>
+                                                        </li>
+                                                    <?php endforeach; ?>
+                                                </ul>
+                                            <?php else: ?>
+                                                <p class="text-muted">No hay vehículos registrados</p>
+                                            <?php endif; ?>
+                                        </div>
+                                        <div class="col-md-6">
+                                            <h6>Resumen General</h6>
+                                            <div class="alert alert-info">
+                                                <p class="mb-1"><strong>Total de vehículos registrados:</strong> <?= $total_vehiculos ?></p>
+                                                <p class="mb-1"><strong>Vehículos hoy:</strong> <?= $vehiculos_hoy ?></p>
+                                                <p class="mb-0"><strong>Solicitudes pendientes:</strong> <?= $solicitudes_pendientes ?></p>
+                                            </div>
+                                        </div>
                                     </div>
                                 </div>
                             </div>

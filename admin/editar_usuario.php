@@ -24,7 +24,8 @@ $query = "SELECT
             v.placa, 
             v.marca, 
             v.color, 
-            v.detalle_tipo
+            v.detalle_tipo,
+            v.foto_vehiculo
           FROM usuarios_parqueadero u 
           LEFT JOIN vehiculos v ON u.id = v.usuario_id 
           WHERE u.id = ? AND u.estado = 'aprobado'";
@@ -38,6 +39,11 @@ if (!$usuario) {
     header('Location: usuarios_aprobados.php?error=Usuario no encontrado');
     exit();
 }
+
+// Configuración para subida de archivos
+$ruta_imagenes = __DIR__ . '/../assets/img/usuarios/';
+$extensiones_permitidas = ['jpg', 'jpeg', 'png'];
+$max_tamano_imagen = 2 * 1024 * 1024; // 2MB
 
 // Procesar el formulario de edición
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -58,19 +64,89 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $color = !empty($_POST['color']) ? trim($_POST['color']) : null;
     $detalle_tipo = !empty($_POST['detalle_tipo']) ? trim($_POST['detalle_tipo']) : null;
     
+    // Variables para nuevas fotos
+    $nueva_foto_usuario = $usuario['foto_usuario'];
+    $nueva_foto_vehiculo = $usuario['foto_vehiculo'];
+    
     try {
         // Iniciar transacción
         $conn->begin_transaction();
         
+        // Procesar nueva foto de usuario si se subió
+        if (isset($_FILES['foto_usuario']) && $_FILES['foto_usuario']['error'] === UPLOAD_ERR_OK) {
+            $foto_info = $_FILES['foto_usuario'];
+            
+            // Validar tipo de archivo
+            $extension = strtolower(pathinfo($foto_info['name'], PATHINFO_EXTENSION));
+            if (!in_array($extension, $extensiones_permitidas)) {
+                throw new Exception("Solo se permiten imágenes JPG, JPEG o PNG para la foto de perfil");
+            }
+
+            // Validar tamaño
+            if ($foto_info['size'] > $max_tamano_imagen) {
+                throw new Exception("La imagen de perfil no debe exceder 2MB");
+            }
+
+            // Crear nombre único
+            $nombre_foto = 'foto_usuario_' . md5($cedula . time()) . '.' . $extension;
+            $ruta_foto = $ruta_imagenes . $nombre_foto;
+
+            // Mover archivo
+            if (!move_uploaded_file($foto_info['tmp_name'], $ruta_foto)) {
+                throw new Exception("No se pudo guardar la nueva foto de perfil");
+            }
+
+            // Eliminar foto anterior si existe
+            if (!empty($usuario['foto_usuario']) && file_exists(__DIR__ . '/../' . $usuario['foto_usuario'])) {
+                unlink(__DIR__ . '/../' . $usuario['foto_usuario']);
+            }
+
+            $nueva_foto_usuario = 'assets/img/usuarios/' . $nombre_foto;
+        }
+        
+        // Procesar nueva foto del vehículo si se subió
+        if (isset($_FILES['foto_vehiculo']) && $_FILES['foto_vehiculo']['error'] === UPLOAD_ERR_OK) {
+            $foto_info = $_FILES['foto_vehiculo'];
+            
+            // Validar tipo de archivo
+            $extension = strtolower(pathinfo($foto_info['name'], PATHINFO_EXTENSION));
+            if (!in_array($extension, $extensiones_permitidas)) {
+                throw new Exception("Solo se permiten imágenes JPG, JPEG o PNG para la foto del vehículo");
+            }
+
+            // Validar tamaño
+            if ($foto_info['size'] > $max_tamano_imagen) {
+                throw new Exception("La imagen del vehículo no debe exceder 2MB");
+            }
+
+            // Crear nombre único
+            $nombre_foto = 'foto_vehiculo_' . md5($cedula . time()) . '.' . $extension;
+            $ruta_foto = $ruta_imagenes . $nombre_foto;
+
+            // Mover archivo
+            if (!move_uploaded_file($foto_info['tmp_name'], $ruta_foto)) {
+                throw new Exception("No se pudo guardar la nueva foto del vehículo");
+            }
+
+            // Eliminar foto anterior si existe
+            if (!empty($usuario['foto_vehiculo']) && file_exists(__DIR__ . '/../' . $usuario['foto_vehiculo'])) {
+                unlink(__DIR__ . '/../' . $usuario['foto_vehiculo']);
+            }
+
+            $nueva_foto_vehiculo = 'assets/img/usuarios/' . $nombre_foto;
+        }
+        
         // Actualizar información del usuario
         $update_usuario = "UPDATE usuarios_parqueadero 
                           SET nombre_completo = ?, cedula = ?, email = ?, tipo = ?, 
-                              codigo_universitario = ?, facultad = ?, semestre = ?, programa_academico = ?
+                              codigo_universitario = ?, facultad = ?, semestre = ?, programa_academico = ?,
+                              foto_usuario = ?
                           WHERE id = ?";
         
         $stmt_usuario = $conn->prepare($update_usuario);
-        $stmt_usuario->bind_param("ssssssssi", $nombre_completo, $cedula, $email, $tipo, 
-                                 $codigo_universitario, $facultad, $semestre, $programa_academico, $usuario_id);
+        $stmt_usuario->bind_param("sssssssssi", $nombre_completo, $cedula, $email, $tipo, 
+                                 $codigo_universitario, $facultad, $semestre, $programa_academico,
+                                 $nueva_foto_usuario, $usuario_id);
         
         if (!$stmt_usuario->execute()) {
             throw new Exception("Error al actualizar usuario: " . $stmt_usuario->error);
@@ -80,18 +156,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($usuario['vehiculo_id']) {
             // Actualizar vehículo existente
             $update_vehiculo = "UPDATE vehiculos 
-                               SET tipo = ?, placa = ?, marca = ?, color = ?, detalle_tipo = ?
+                               SET tipo = ?, placa = ?, marca = ?, color = ?, detalle_tipo = ?, foto_vehiculo = ?
                                WHERE id = ?";
             
             $stmt_vehiculo = $conn->prepare($update_vehiculo);
-            $stmt_vehiculo->bind_param("sssssi", $tipo_vehiculo, $placa, $marca, $color, $detalle_tipo, $usuario['vehiculo_id']);
+            $stmt_vehiculo->bind_param("ssssssi", $tipo_vehiculo, $placa, $marca, $color, $detalle_tipo, $nueva_foto_vehiculo, $usuario['vehiculo_id']);
         } else {
             // Insertar nuevo vehículo
-            $insert_vehiculo = "INSERT INTO vehiculos (usuario_id, tipo, placa, marca, color, detalle_tipo)
-                               VALUES (?, ?, ?, ?, ?, ?)";
+            $insert_vehiculo = "INSERT INTO vehiculos (usuario_id, tipo, placa, marca, color, detalle_tipo, foto_vehiculo)
+                               VALUES (?, ?, ?, ?, ?, ?, ?)";
             
             $stmt_vehiculo = $conn->prepare($insert_vehiculo);
-            $stmt_vehiculo->bind_param("isssss", $usuario_id, $tipo_vehiculo, $placa, $marca, $color, $detalle_tipo);
+            $stmt_vehiculo->bind_param("issssss", $usuario_id, $tipo_vehiculo, $placa, $marca, $color, $detalle_tipo, $nueva_foto_vehiculo);
         }
         
         if (!$stmt_vehiculo->execute()) {
@@ -107,6 +183,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         // Revertir transacción en caso de error
         $conn->rollback();
+        
+        // Eliminar archivos nuevos si se subieron pero falló el registro
+        if (isset($nueva_foto_usuario) && $nueva_foto_usuario !== $usuario['foto_usuario'] && file_exists(__DIR__ . '/../' . $nueva_foto_usuario)) {
+            unlink(__DIR__ . '/../' . $nueva_foto_usuario);
+        }
+        if (isset($nueva_foto_vehiculo) && $nueva_foto_vehiculo !== $usuario['foto_vehiculo'] && file_exists(__DIR__ . '/../' . $nueva_foto_vehiculo)) {
+            unlink(__DIR__ . '/../' . $nueva_foto_vehiculo);
+        }
+        
         $error = "Error al actualizar: " . $e->getMessage();
     }
 }
@@ -127,6 +212,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             object-fit: cover;
             border-radius: 50%;
         }
+        .vehicle-img {
+            width: 200px;
+            height: 150px;
+            object-fit: cover;
+            border-radius: 8px;
+        }
         .form-section {
             background-color: #f8f9fa;
             border-radius: 8px;
@@ -138,6 +229,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border-bottom: 2px solid #0d6efd;
             padding-bottom: 10px;
             margin-bottom: 20px;
+        }
+        .file-input-container {
+            margin-bottom: 15px;
+        }
+        .current-photo {
+            border: 3px solid #0d6efd;
+            margin-bottom: 10px;
         }
     </style>
 </head>
@@ -164,17 +262,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 <div class="col-md-4 mb-4">
                     <div class="card">
                         <div class="card-body text-center">
+                            <!-- Foto actual del usuario -->
                             <?php if ($usuario['foto_usuario']): ?>
-                                <img src="../<?= $usuario['foto_usuario'] ?>" alt="Foto usuario" class="user-img mb-3">
+                                <img src="../<?= $usuario['foto_usuario'] ?>" alt="Foto usuario" class="user-img current-photo mb-3">
+                                <p class="text-muted small">Foto actual</p>
                             <?php else: ?>
                                 <div class="user-img bg-light rounded-circle d-flex align-items-center justify-content-center mx-auto mb-3">
                                     <i class="fas fa-user text-muted" style="font-size: 3rem;"></i>
                                 </div>
+                                <p class="text-muted small">Sin foto</p>
                             <?php endif; ?>
+                            
                             <h5><?= htmlspecialchars($usuario['nombre_completo']) ?></h5>
                             <p class="text-muted"><?= ucfirst($usuario['tipo']) ?></p>
                             <p class="text-muted">ID: <?= $usuario['id'] ?></p>
                             
+                            <!-- Código QR -->
                             <?php if ($usuario['qr_code']): ?>
                                 <div class="mt-3">
                                     <p class="mb-1"><strong>Código QR:</strong></p>
@@ -245,6 +348,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     </div>
                     
+                    <!-- Foto de Perfil -->
+                    <div class="form-section">
+                        <h5><i class="fas fa-camera me-2"></i>Foto de Perfil</h5>
+                        
+                        <div class="file-input-container">
+                            <label for="foto_usuario" class="form-label">Cambiar Foto de Perfil</label>
+                            <input type="file" class="form-control" id="foto_usuario" name="foto_usuario" 
+                                   accept="image/jpeg, image/jpg, image/png">
+                            <div class="form-text">
+                                Formatos permitidos: JPG, JPEG, PNG. Tamaño máximo: 2MB.
+                                <?php if ($usuario['foto_usuario']): ?>
+                                    <br><strong>Nota:</strong> La foto actual será reemplazada.
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </div>
+                    
                     <!-- Información del Vehículo -->
                     <div class="form-section">
                         <h5><i class="fas fa-car me-2"></i>Información del Vehículo</h5>
@@ -283,6 +403,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 <label for="detalle_tipo" class="form-label">Detalle del Tipo (si seleccionó "Otro")</label>
                                 <input type="text" class="form-control" id="detalle_tipo" name="detalle_tipo" 
                                        value="<?= htmlspecialchars($usuario['detalle_tipo'] ?? '') ?>">
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <!-- Foto del Vehículo -->
+                    <div class="form-section">
+                        <h5><i class="fas fa-camera-retro me-2"></i>Foto del Vehículo</h5>
+                        
+                        <!-- Mostrar foto actual del vehículo si existe -->
+                        <?php if (!empty($usuario['foto_vehiculo'])): ?>
+                        <div class="text-center mb-3">
+                            <p class="mb-2"><strong>Foto actual del vehículo:</strong></p>
+                            <img src="../<?= $usuario['foto_vehiculo'] ?>" alt="Foto del vehículo" class="vehicle-img current-photo">
+                        </div>
+                        <?php endif; ?>
+                        
+                        <div class="file-input-container">
+                            <label for="foto_vehiculo" class="form-label"><?= empty($usuario['foto_vehiculo']) ? 'Subir' : 'Cambiar' ?> Foto del Vehículo</label>
+                            <input type="file" class="form-control" id="foto_vehiculo" name="foto_vehiculo" 
+                                   accept="image/jpeg, image/jpg, image/png">
+                            <div class="form-text">
+                                Formatos permitidos: JPG, JPEG, PNG. Tamaño máximo: 2MB.
+                                <?php if (!empty($usuario['foto_vehiculo'])): ?>
+                                    <br><strong>Nota:</strong> La foto actual será reemplazada.
+                                <?php endif; ?>
                             </div>
                         </div>
                     </div>

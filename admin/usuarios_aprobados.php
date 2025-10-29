@@ -185,6 +185,16 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
         .clear-filters {
             margin-top: 10px;
         }
+        .btn-view {
+            background-color: #17a2b8;
+            border-color: #17a2b8;
+            color: white;
+        }
+        .btn-view:hover {
+            background-color: #138496;
+            border-color: #117a8b;
+            color: white;
+        }
     </style>
 </head>
 <body>
@@ -287,9 +297,19 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
                             <div class="card-header d-flex justify-content-between align-items-center">
                                 <span class="badge bg-success badge-estado">Aprobado</span>
                                 <div class="action-buttons d-flex">
-                                    <a href="editar_usuario.php?id=<?= $usuario['id'] ?>" class="btn btn-sm btn-warning btn-action me-1" title="Editar usuario">
+                                    <!-- BOTÓN VER -->
+                                    <a href="ver_usuario.php?id=<?= $usuario['id'] ?>" 
+                                       class="btn btn-sm btn-view btn-action me-1" 
+                                       title="Ver usuario">
+                                        <i class="fas fa-eye"></i>
+                                    </a>
+                                    <!-- BOTÓN EDITAR -->
+                                    <a href="editar_usuario.php?id=<?= $usuario['id'] ?>" 
+                                       class="btn btn-sm btn-warning btn-action me-1" 
+                                       title="Editar usuario">
                                         <i class="fas fa-edit"></i>
                                     </a>
+                                    <!-- BOTÓN ELIMINAR -->
                                     <button type="button" class="btn btn-sm btn-danger btn-action" 
                                             title="Eliminar usuario" data-bs-toggle="modal" 
                                             data-bs-target="#confirmDeleteModal" 
@@ -365,7 +385,10 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
                                         <i class="fas fa-calendar-plus me-1"></i>
                                         <?= date('d/m/Y H:i', strtotime($usuario['fecha_registro'])) ?>
                                     </span>
-                                    
+                                    <!-- Enlace rápido para ver usuario -->
+                                    <a href="ver_usuario.php?id=<?= $usuario['id'] ?>" class="btn btn-sm btn-outline-primary">
+                                        <i class="fas fa-external-link-alt me-1"></i> Ver completo
+                                    </a>
                                 </div>
                             </div>
                         </div>
