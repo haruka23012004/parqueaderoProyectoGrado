@@ -67,6 +67,10 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
             color: #6c757d;
             font-style: italic;
         }
+        .parqueadero-badge {
+            font-size: 1.1rem;
+            padding: 8px 15px;
+        }
     </style>
 </head>
 <body>
@@ -77,12 +81,43 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
             <div class="col-lg-8">
                 <div class="text-center text-white mb-4">
                     <h1><i class="fas fa-qrcode me-2"></i>Lector de QR</h1>
-                    <p class="lead">Escanea el código QR para registrar el acceso al parqueadero</p>
+                    <p class="lead">Registro de accesos al parqueadero</p>
                 </div>
 
+                <!-- Selector de Parqueadero -->
                 <div class="scanner-container p-4 mb-4">
                     <div class="text-center mb-3">
-                        <h4 class="text-primary"><i class="fas fa-camera me-2"></i>Área de Escaneo</h4>
+                        <h4 class="text-primary"><i class="fas fa-parking me-2"></i>Seleccionar Parqueadero</h4>
+                        <p class="text-muted">Elija el parqueadero donde registrará los accesos</p>
+                    </div>
+                    
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="select-parqueadero" class="form-label"><strong>Parqueadero Actual:</strong></label>
+                                <select class="form-select form-select-lg" id="select-parqueadero">
+                                    <option value="">-- Seleccione un parqueadero --</option>
+                                    <option value="1">🏢 Parqueadero 1 - Principal</option>
+                                    <option value="2">🚗 Parqueadero 2 - Secundario</option>
+                                </select>
+                            </div>
+                            <div class="alert alert-info">
+                                <small>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Todos los accesos escaneados se registrarán en el parqueadero seleccionado
+                                </small>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Área de Escaneo -->
+                <div id="scanner-section" class="scanner-container p-4 mb-4" style="display: none;">
+                    <div class="text-center mb-3">
+                        <h4 class="text-primary">
+                            <i class="fas fa-camera me-2"></i>Área de Escaneo
+                            <span id="current-parqueadero" class="badge bg-success parqueadero-badge ms-2"></span>
+                        </h4>
                         <p class="text-muted">Enfoca el código QR dentro del marco</p>
                     </div>
                     
@@ -107,6 +142,7 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
                 <div id="result-container" class="user-card hidden p-4">
                     <div class="text-center mb-3">
                         <h4 class="text-success"><i class="fas fa-check-circle me-2"></i>Acceso Registrado</h4>
+                        <p class="text-muted" id="result-parqueadero"></p>
                     </div>
                     
                     <div class="row">
@@ -172,6 +208,29 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
 
             console.log('Librería QR cargada correctamente');
 
+            // Manejar selección de parqueadero
+            const parqueaderoSelect = document.getElementById('select-parqueadero');
+            const scannerSection = document.getElementById('scanner-section');
+            const currentParqueaderoBadge = document.getElementById('current-parqueadero');
+
+            parqueaderoSelect.addEventListener('change', function() {
+                const parqueaderoId = this.value;
+                const selectedText = this.options[this.selectedIndex].text;
+                
+                if (parqueaderoId) {
+                    scannerSection.style.display = 'block';
+                    currentParqueaderoBadge.textContent = selectedText.replace('-- Seleccione un parqueadero --', '').trim();
+                    
+                    // Scroll suave al scanner
+                    setTimeout(() => {
+                        scannerSection.scrollIntoView({ behavior: 'smooth' });
+                    }, 300);
+                } else {
+                    scannerSection.style.display = 'none';
+                    currentParqueaderoBadge.textContent = '';
+                }
+            });
+
             class QRScanner {
                 constructor() {
                     this.html5QrcodeScanner = null;
@@ -198,6 +257,13 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
                 }
 
                 async startScanner() {
+                    // Verificar que hay un parqueadero seleccionado
+                    const parqueaderoId = document.getElementById('select-parqueadero').value;
+                    if (!parqueaderoId) {
+                        this.showError('Por favor seleccione un parqueadero primero');
+                        return;
+                    }
+
                     try {
                         // Limpiar contenido inicial
                         this.readerElement.innerHTML = '';
@@ -275,9 +341,18 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
 
                 async processAccess(usuario_id, hash) {
                     try {
+                        const parqueaderoId = document.getElementById('select-parqueadero').value;
+                        const parqueaderoText = document.getElementById('select-parqueadero').options[document.getElementById('select-parqueadero').selectedIndex].text;
+                        
+                        if (!parqueaderoId) {
+                            this.showError('Por favor seleccione un parqueadero primero');
+                            return;
+                        }
+
                         const formData = new FormData();
                         formData.append('usuario_id', usuario_id);
                         formData.append('hash', hash);
+                        formData.append('parqueadero_id', parqueaderoId);
                         formData.append('action', 'registrar_acceso');
 
                         const response = await fetch('procesar_acceso.php', {
@@ -288,6 +363,8 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
                         const result = await response.json();
 
                         if (result.success) {
+                            // Agregar información del parqueadero al resultado
+                            result.data.parqueadero = parqueaderoText;
                             this.showSuccess(result.data);
                         } else {
                             this.showError(result.message || 'Error al procesar el acceso');
@@ -305,6 +382,7 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
                     document.getElementById('vehicle-placa').textContent = userData.placa;
                     document.getElementById('vehicle-type').textContent = userData.tipo_vehiculo;
                     document.getElementById('access-time').textContent = new Date().toLocaleString();
+                    document.getElementById('result-parqueadero').textContent = userData.parqueadero;
 
                     this.resultContainer.classList.remove('hidden');
                     this.errorContainer.classList.add('hidden');
