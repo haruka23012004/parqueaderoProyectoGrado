@@ -6,15 +6,18 @@ if (session_status() === PHP_SESSION_NONE) {
 
 // ---------------- BASE_URL UNIVERSAL ---------------- //
 
-$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
+$scriptPath = str_replace('\\', '/', $_SERVER['SCRIPT_NAME']);
 
-if ($scriptDir === '/' || $scriptDir === '\\') {
-    define('BASE_URL', '');
-} else {
-    $partes = explode('/', trim($scriptDir, '/'));
-    $rootFolder = '/' . $partes[0];
-    define('BASE_URL', $rootFolder);
-}
+// Ejemplo en servidor:
+// /parqueaderoProyectoGrado/acceso/procesar_login.php
+
+$parts = explode('/', trim($scriptPath, '/')); 
+
+// El primer segmento es SIEMPRE la carpeta del proyecto
+$rootFolder = '/' . $parts[0];
+
+define('BASE_URL', $rootFolder);
+
 
 // ---------------- FUNCIONES ---------------- //
 

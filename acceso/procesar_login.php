@@ -66,7 +66,8 @@ try {
     $_SESSION['nivel_permiso'] = $empleado['nivel_permiso'];
 
 
-    var_dump(BASE_URL); exit;
+error_log("BASE_URL = " . BASE_URL);
+
 
 
     // Redirige según rol
