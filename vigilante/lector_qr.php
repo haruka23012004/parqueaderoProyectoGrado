@@ -120,165 +120,155 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script>
-        // Verificar que la librería se cargó
-        console.log('Html5QrcodeScanner disponible:', typeof Html5QrcodeScanner !== 'undefined');
-        
-        class QRScanner {
-            constructor() {
-                // Verificar que la librería esté disponible
-                if (typeof Html5QrcodeScanner === 'undefined') {
-                    this.showError('Error: No se pudo cargar la librería QR. Recarga la página.');
-                    return;
-                }
-                
-                this.html5QrcodeScanner = null;
-                this.isScanning = false;
-                this.initializeElements();
-                this.initializeEventListeners();
-            }
+    <script type="module">
+    import { Html5QrcodeScanner } from 'https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js';
+    
+    class QRScanner {
+        constructor() {
+            this.html5QrcodeScanner = null;
+            this.isScanning = false;
+            this.initializeElements();
+            this.initializeEventListeners();
+        }
 
-            initializeElements() {
-                this.readerElement = document.getElementById('reader');
-                this.btnStart = document.getElementById('btn-start');
-                this.btnStop = document.getElementById('btn-stop');
-                this.btnNewScan = document.getElementById('btn-new-scan');
-                this.btnRetry = document.getElementById('btn-retry');
-                this.resultContainer = document.getElementById('result-container');
-                this.errorContainer = document.getElementById('error-container');
-            }
+        initializeElements() {
+            this.readerElement = document.getElementById('reader');
+            this.btnStart = document.getElementById('btn-start');
+            this.btnStop = document.getElementById('btn-stop');
+            this.btnNewScan = document.getElementById('btn-new-scan');
+            this.btnRetry = document.getElementById('btn-retry');
+            this.resultContainer = document.getElementById('result-container');
+            this.errorContainer = document.getElementById('error-container');
+        }
 
-            initializeEventListeners() {
-                this.btnStart.addEventListener('click', () => this.startScanner());
-                this.btnStop.addEventListener('click', () => this.stopScanner());
-                this.btnNewScan.addEventListener('click', () => this.resetScanner());
-                this.btnRetry.addEventListener('click', () => this.resetScanner());
-            }
+        initializeEventListeners() {
+            this.btnStart.addEventListener('click', () => this.startScanner());
+            this.btnStop.addEventListener('click', () => this.stopScanner());
+            this.btnNewScan.addEventListener('click', () => this.resetScanner());
+            this.btnRetry.addEventListener('click', () => this.resetScanner());
+        }
 
-            async startScanner() {
-                try {
-                    this.html5QrcodeScanner = new Html5QrcodeScanner(
-                        "reader", 
-                        { 
-                            fps: 10, 
-                            qrbox: { width: 250, height: 250 },
-                            supportedScanTypes: [Html5QrcodeScanType.SCAN_TYPE_QR]
-                        }, 
-                        false
-                    );
+        async startScanner() {
+            try {
+                this.html5QrcodeScanner = new Html5QrcodeScanner(
+                    "reader", 
+                    { 
+                        fps: 10, 
+                        qrbox: { width: 250, height: 250 }
+                    }, 
+                    false
+                );
 
-                    await this.html5QrcodeScanner.render(
-                        (decodedText) => this.onScanSuccess(decodedText),
-                        (errorMessage) => this.onScanFailure(errorMessage)
-                    );
+                await this.html5QrcodeScanner.render(
+                    (decodedText) => this.onScanSuccess(decodedText),
+                    (errorMessage) => this.onScanFailure(errorMessage)
+                );
 
-                    this.isScanning = true;
-                    this.btnStart.style.display = 'none';
-                    this.btnStop.style.display = 'inline-block';
-                    this.readerElement.classList.add('scan-animation');
+                this.isScanning = true;
+                this.btnStart.style.display = 'none';
+                this.btnStop.style.display = 'inline-block';
+                this.readerElement.classList.add('scan-animation');
 
-                } catch (error) {
-                    this.showError('Error al iniciar la cámara: ' + error.message);
-                }
-            }
-
-            stopScanner() {
-                if (this.html5QrcodeScanner && this.isScanning) {
-                    this.html5QrcodeScanner.clear().catch(error => {
-                        console.error("Error al detener scanner:", error);
-                    });
-                    this.isScanning = false;
-                }
-                
-                this.btnStart.style.display = 'inline-block';
-                this.btnStop.style.display = 'none';
-                this.readerElement.classList.remove('scan-animation');
-            }
-
-            async onScanSuccess(decodedText) {
-                try {
-                    console.log("QR escaneado:", decodedText);
-                    
-                    // PROCESAR TU FORMATO QR ACTUAL: "PARQ:usuario_id:hash"
-                    const qrParts = decodedText.split(':');
-                    
-                    if (qrParts.length !== 3 || qrParts[0] !== 'PARQ') {
-                        throw new Error('Formato QR inválido');
-                    }
-                    
-                    const usuario_id = qrParts[1];
-                    const hash = qrParts[2];
-                    
-                    // Detener scanner temporalmente
-                    this.stopScanner();
-                    
-                    // Procesar el acceso
-                    await this.processAccess(usuario_id, hash);
-                    
-                } catch (error) {
-                    this.showError('Código QR inválido: ' + error.message);
-                }
-            }
-
-            onScanFailure(error) {
-                // Errores de escaneo se manejan silenciosamente
-                console.log("Error de escaneo:", error);
-            }
-
-            async processAccess(usuario_id, hash) {
-                try {
-                    const formData = new FormData();
-                    formData.append('usuario_id', usuario_id);
-                    formData.append('hash', hash);
-                    formData.append('action', 'registrar_acceso');
-
-                    const response = await fetch('procesar_acceso.php', {
-                        method: 'POST',
-                        body: formData
-                    });
-
-                    const result = await response.json();
-
-                    if (result.success) {
-                        this.showSuccess(result.data);
-                    } else {
-                        this.showError(result.message || 'Error al procesar el acceso');
-                    }
-
-                } catch (error) {
-                    this.showError('Error de conexión: ' + error.message);
-                }
-            }
-
-            showSuccess(userData) {
-                document.getElementById('user-name').textContent = userData.nombre_completo;
-                document.getElementById('user-cedula').textContent = userData.cedula;
-                document.getElementById('user-type').textContent = userData.tipo;
-                document.getElementById('vehicle-placa').textContent = userData.placa;
-                document.getElementById('vehicle-type').textContent = userData.tipo_vehiculo;
-                document.getElementById('access-time').textContent = new Date().toLocaleString();
-
-                this.resultContainer.classList.remove('hidden');
-                this.errorContainer.classList.add('hidden');
-            }
-
-            showError(message) {
-                document.getElementById('error-message').textContent = message;
-                this.errorContainer.classList.remove('hidden');
-                this.resultContainer.classList.add('hidden');
-            }
-
-            resetScanner() {
-                this.resultContainer.classList.add('hidden');
-                this.errorContainer.classList.add('hidden');
-                this.stopScanner();
-                setTimeout(() => this.startScanner(), 500);
+            } catch (error) {
+                this.showError('Error al iniciar la cámara: ' + error.message);
             }
         }
 
-        document.addEventListener('DOMContentLoaded', () => {
-            new QRScanner();
-        });
-    </script>
-</body>
-</html>
+        stopScanner() {
+            if (this.html5QrcodeScanner && this.isScanning) {
+                this.html5QrcodeScanner.clear().catch(error => {
+                    console.error("Error al detener scanner:", error);
+                });
+                this.isScanning = false;
+            }
+            
+            this.btnStart.style.display = 'inline-block';
+            this.btnStop.style.display = 'none';
+            this.readerElement.classList.remove('scan-animation');
+        }
+
+        async onScanSuccess(decodedText) {
+            try {
+                console.log("QR escaneado:", decodedText);
+                
+                // PROCESAR TU FORMATO QR ACTUAL: "PARQ:usuario_id:hash"
+                const qrParts = decodedText.split(':');
+                
+                if (qrParts.length !== 3 || qrParts[0] !== 'PARQ') {
+                    throw new Error('Formato QR inválido');
+                }
+                
+                const usuario_id = qrParts[1];
+                const hash = qrParts[2];
+                
+                // Detener scanner temporalmente
+                this.stopScanner();
+                
+                // Procesar el acceso
+                await this.processAccess(usuario_id, hash);
+                
+            } catch (error) {
+                this.showError('Código QR inválido: ' + error.message);
+            }
+        }
+
+        onScanFailure(error) {
+            // Errores de escaneo se manejan silenciosamente
+            console.log("Error de escaneo:", error);
+        }
+
+        async processAccess(usuario_id, hash) {
+            try {
+                const formData = new FormData();
+                formData.append('usuario_id', usuario_id);
+                formData.append('hash', hash);
+                formData.append('action', 'registrar_acceso');
+
+                const response = await fetch('procesar_acceso.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    this.showSuccess(result.data);
+                } else {
+                    this.showError(result.message || 'Error al procesar el acceso');
+                }
+
+            } catch (error) {
+                this.showError('Error de conexión: ' + error.message);
+            }
+        }
+
+        showSuccess(userData) {
+            document.getElementById('user-name').textContent = userData.nombre_completo;
+            document.getElementById('user-cedula').textContent = userData.cedula;
+            document.getElementById('user-type').textContent = userData.tipo;
+            document.getElementById('vehicle-placa').textContent = userData.placa;
+            document.getElementById('vehicle-type').textContent = userData.tipo_vehiculo;
+            document.getElementById('access-time').textContent = new Date().toLocaleString();
+
+            this.resultContainer.classList.remove('hidden');
+            this.errorContainer.classList.add('hidden');
+        }
+
+        showError(message) {
+            document.getElementById('error-message').textContent = message;
+            this.errorContainer.classList.remove('hidden');
+            this.resultContainer.classList.add('hidden');
+        }
+
+        resetScanner() {
+            this.resultContainer.classList.add('hidden');
+            this.errorContainer.classList.add('hidden');
+            this.stopScanner();
+            setTimeout(() => this.startScanner(), 500);
+        }
+    }
+
+    document.addEventListener('DOMContentLoaded', () => {
+        new QRScanner();
+    });
+</script>
