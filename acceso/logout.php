@@ -31,6 +31,7 @@ session_destroy();
 setMensaje('success', 'Has cerrado sesión correctamente');
 
 // 5. Redirigir al login
-header('Location: /PARQUEADEROPROYECTOGRADO/acceso/login.php');
+header('Location: ' . BASE_URL . '/acceso/login.php');
+
 exit();
 ?>
