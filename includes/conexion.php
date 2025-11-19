@@ -12,7 +12,7 @@ $database = "parqueaderoautomatizado";*/
 
 $servername = "localhost";
 $username = "u648222299_eapp"; 
-$password = "1233444JSCWE$estefany"; 
+$password = '1233444JSCWE$estefany'; 
 $database = "u648222299_parking_Grado";
 
 // Crear conexión
