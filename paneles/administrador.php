@@ -60,6 +60,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
             border: none;
             border-radius: 10px;
             box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+            height: 100%;
         }
         .card-dashboard:hover {
             transform: translateY(-5px);
@@ -98,15 +99,88 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
             font-size: 0.85rem;
             color: #6c757d;
         }
+        
+        /* Estilos responsivos */
+        @media (max-width: 768px) {
+            .sidebar {
+                position: fixed;
+                top: 0;
+                left: -100%;
+                width: 280px;
+                height: 100vh;
+                z-index: 1050;
+                transition: left 0.3s ease;
+            }
+            .sidebar.show {
+                left: 0;
+            }
+            .sidebar-overlay {
+                display: none;
+                position: fixed;
+                top: 0;
+                left: 0;
+                width: 100%;
+                height: 100%;
+                background-color: rgba(0, 0, 0, 0.5);
+                z-index: 1040;
+            }
+            .sidebar-overlay.show {
+                display: block;
+            }
+            .main-content {
+                margin-left: 0 !important;
+            }
+            .quick-actions .btn {
+                width: 100%;
+                margin-bottom: 10px;
+            }
+            .stats-section .row > div {
+                margin-bottom: 15px;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .sidebar {
+                position: fixed;
+                height: 100vh;
+                overflow-y: auto;
+            }
+            .main-content {
+                margin-left: 25%;
+            }
+        }
+        
+        @media (min-width: 992px) {
+            .main-content {
+                margin-left: 16.666667%;
+            }
+        }
+        
+        .mobile-menu-btn {
+            display: none;
+        }
+        
+        @media (max-width: 768px) {
+            .mobile-menu-btn {
+                display: block;
+            }
+        }
     </style>
 </head>
 <body>
+    <!-- Overlay para móviles -->
+    <div class="sidebar-overlay"></div>
+    
     <div class="container-fluid">
         <div class="row">
             <!-- Sidebar -->
-            <div class="col-md-3 col-lg-2 sidebar vh-100 position-fixed">
-                <div class="p-4">
-                    <h4 class="text-center mb-4">Sistema Parqueadero</h4>
+            <div class="col-lg-2 col-xl-2 sidebar">
+                <div class="p-3 p-md-4">
+                    <div class="d-flex justify-content-between align-items-center mb-4 d-md-none">
+                        <h4 class="text-white">Menú</h4>
+                        <button type="button" class="btn-close btn-close-white" id="closeSidebar"></button>
+                    </div>
+                    <h4 class="text-center mb-4 d-none d-md-block">Sistema Parqueadero</h4>
                     <div class="user-info mb-4 text-center">
                         <p class="mb-1"><strong><?= htmlspecialchars($_SESSION['usuario_login']) ?></strong></p>
                         <span class="badge bg-primary">Administrador</span>
@@ -143,10 +217,9 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                         </li>
                         <li class="nav-item">
                             <a href="../admin/empleados.php" class="nav-link">
-                                <i class="bi bi-car-front"></i> Empleados
+                                <i class="bi bi-person-badge"></i> Empleados
                             </a>
                         </li>
-
                         <li class="nav-item">
                             <a href="#" class="nav-link">
                                 <i class="bi bi-graph-up"></i> Reportes
@@ -162,19 +235,23 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
             </div>
 
             <!-- Main Content -->
-            <div class="col-md-9 col-lg-10 ms-auto">
+            <div class="col-lg-10 col-xl-10 main-content">
+                <!-- Navbar superior -->
                 <nav class="navbar navbar-expand-lg navbar-light bg-light">
                     <div class="container-fluid">
+                        <button class="navbar-toggler mobile-menu-btn" type="button">
+                            <span class="navbar-toggler-icon"></span>
+                        </button>
                         <span class="navbar-brand">Panel de Administración</span>
                         <div class="d-flex">
                             <a href="../acceso/logout.php" class="btn btn-outline-danger">
-                                <i class="bi bi-box-arrow-right"></i> Cerrar Sesión
+                                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
                             </a>
                         </div>
                     </div>
                 </nav>
 
-                <div class="container-fluid p-4">
+                <div class="container-fluid p-3 p-md-4">
                     <div class="row mb-4">
                         <div class="col-12">
                             <h2>Bienvenido, <?= htmlspecialchars($_SESSION['usuario_login']) ?></h2>
@@ -183,8 +260,8 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                     </div>
 
                     <!-- Cards de Resumen -->
-                    <div class="row g-4">
-                        <div class="col-md-3">
+                    <div class="row g-3 g-md-4 stats-section">
+                        <div class="col-sm-6 col-md-4 col-lg-3">
                             <div class="card card-dashboard bg-primary text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Usuarios Registrados</h5>
@@ -193,7 +270,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-md-4 col-lg-3">
                             <div class="card card-dashboard bg-warning text-dark">
                                 <div class="card-body">
                                     <h5 class="card-title">Solicitudes Pendientes</h5>
@@ -202,7 +279,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-3">
+                        <div class="col-sm-6 col-md-4 col-lg-3">
                             <div class="card card-dashboard bg-info text-white">
                                 <div class="card-body">
                                     <h5 class="card-title">Total Vehículos</h5>
@@ -214,17 +291,28 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                                 </div>
                             </div>
                         </div>
+                        <div class="col-sm-6 col-md-4 col-lg-3">
+                            <div class="card card-dashboard bg-success text-white">
+                                <div class="card-body">
+                                    <h5 class="card-title">Vehículos Hoy</h5>
+                                    <p class="card-text display-5"><?= $vehiculos_hoy ?></p>
+                                    <div class="stats-small">
+                                        Registrados hoy
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
                     </div>
 
-                    <!-- Sección adicional -->
-                    <div class="row mt-5">
+                    <!-- Sección de Acciones Rápidas -->
+                    <div class="row mt-4 mt-md-5">
                         <div class="col-12">
                             <div class="card">
                                 <div class="card-header">
                                     <h5>Acciones Rápidas</h5>
                                 </div>
-                                <div class="card-body">
-                                    <div class="d-flex gap-3">
+                                <div class="card-body quick-actions">
+                                    <div class="d-flex flex-column flex-md-row gap-3">
                                         <a href="../registro_empleados.php" class="btn btn-primary">
                                             <i class="bi bi-person-plus"></i> Registrar Nuevo Empleado
                                         </a>
@@ -249,7 +337,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                                 </div>
                                 <div class="card-body">
                                     <div class="row">
-                                        <div class="col-md-6">
+                                        <div class="col-md-6 mb-3 mb-md-0">
                                             <h6>Distribución por Tipo</h6>
                                             <?php if (!empty($vehiculos_por_tipo)): ?>
                                                 <ul class="list-group">
@@ -283,5 +371,50 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Control del sidebar en dispositivos móviles
+        document.addEventListener('DOMContentLoaded', function() {
+            const sidebar = document.querySelector('.sidebar');
+            const overlay = document.querySelector('.sidebar-overlay');
+            const menuBtn = document.querySelector('.mobile-menu-btn');
+            const closeBtn = document.getElementById('closeSidebar');
+            
+            if (menuBtn) {
+                menuBtn.addEventListener('click', function() {
+                    sidebar.classList.add('show');
+                    overlay.classList.add('show');
+                });
+            }
+            
+            if (closeBtn) {
+                closeBtn.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
+                });
+            }
+            
+            if (overlay) {
+                overlay.addEventListener('click', function() {
+                    sidebar.classList.remove('show');
+                    overlay.classList.remove('show');
+                });
+            }
+            
+            // Ajustar altura del contenido principal
+            function adjustMainContentHeight() {
+                const navbar = document.querySelector('.navbar');
+                const mainContent = document.querySelector('.main-content');
+                
+                if (navbar && mainContent) {
+                    const navbarHeight = navbar.offsetHeight;
+                    mainContent.style.minHeight = `calc(100vh - ${navbarHeight}px)`;
+                }
+            }
+            
+            // Ejecutar al cargar y al redimensionar
+            adjustMainContentHeight();
+            window.addEventListener('resize', adjustMainContentHeight);
+        });
+    </script>
 </body>
 </html>
