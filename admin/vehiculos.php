@@ -125,6 +125,12 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
             object-fit: cover;
             border-radius: 8px;
         }
+        .vehicle-img-mobile {
+            width: 80px;
+            height: 60px;
+            object-fit: cover;
+            border-radius: 6px;
+        }
         .badge-vehiculo {
             font-size: 0.8rem;
         }
@@ -160,14 +166,96 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
             font-weight: bold;
             letter-spacing: 1px;
         }
+        
+        /* Estilos responsivos */
+        @media (max-width: 768px) {
+            .table-desktop {
+                display: none;
+            }
+            .cards-mobile {
+                display: block;
+            }
+            .vehicle-img {
+                width: 100px;
+                height: 75px;
+            }
+            .header-mobile {
+                flex-direction: column;
+                gap: 15px;
+                align-items: flex-start !important;
+            }
+            .filter-row-mobile {
+                flex-direction: column;
+            }
+            .filter-row-mobile .col-md-4,
+            .filter-row-mobile .col-md-3,
+            .filter-row-mobile .col-md-2 {
+                width: 100%;
+                margin-bottom: 15px;
+            }
+            .stats-row-mobile {
+                flex-direction: column;
+            }
+            .stats-row-mobile .col-md-4 {
+                width: 100%;
+                margin-bottom: 15px;
+            }
+        }
+        
+        @media (min-width: 769px) {
+            .cards-mobile {
+                display: none;
+            }
+            .table-desktop {
+                display: table;
+            }
+        }
+        
+        .vehicle-card {
+            border: 1px solid #dee2e6;
+            border-radius: 10px;
+            margin-bottom: 15px;
+            transition: all 0.3s ease;
+        }
+        .vehicle-card:hover {
+            box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+        }
+        .vehicle-card-header {
+            background-color: #f8f9fa;
+            padding: 12px 15px;
+            border-bottom: 1px solid #dee2e6;
+            border-radius: 10px 10px 0 0;
+        }
+        .vehicle-card-body {
+            padding: 15px;
+        }
+        .vehicle-info {
+            margin-bottom: 8px;
+            display: flex;
+            justify-content: space-between;
+        }
+        .vehicle-info strong {
+            color: #495057;
+            min-width: 100px;
+        }
+        .btn-group-mobile {
+            display: flex;
+            gap: 8px;
+            justify-content: center;
+            margin-top: 10px;
+        }
+        .btn-group-mobile .btn {
+            flex: 1;
+            min-width: 100px;
+        }
     </style>
 </head>
 <body>
     <?php include '../navbar.php'; ?>
     
-    <div class="container-fluid mt-4">
-        <div class="d-flex justify-content-between align-items-center mb-4">
-            <h2><i class="fas fa-car me-2"></i>Vehículos Registrados</h2>
+    <div class="container-fluid mt-3 mt-md-4">
+        <div class="d-flex justify-content-between align-items-center mb-4 header-mobile">
+            <h2 class="mb-0"><i class="fas fa-car me-2"></i>Vehículos Registrados</h2>
             <a href="../paneles/administrador.php" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
             </a>
@@ -176,7 +264,7 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
         <!-- Filtros y búsqueda -->
         <div class="card mb-4">
             <div class="card-body">
-                <form method="GET" class="row g-3" id="filterForm">
+                <form method="GET" class="row g-3 filter-row-mobile" id="filterForm">
                     <div class="col-md-4">
                         <label for="busqueda" class="form-label">Buscar</label>
                         <div class="input-group">
@@ -248,8 +336,8 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
         </div>
 
         <?php if (count($vehiculos) > 0): ?>
-            <!-- Vista de Tabla -->
-            <div class="card">
+            <!-- Vista de Tabla para Escritorio -->
+            <div class="card table-desktop">
                 <div class="card-header">
                     <h5 class="mb-0">
                         <i class="fas fa-list me-2"></i>Lista de Vehículos
@@ -343,8 +431,86 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
                 </div>
             </div>
 
+            <!-- Vista de Tarjetas para Móviles -->
+            <div class="cards-mobile">
+                <?php foreach ($vehiculos as $vehiculo): ?>
+                <div class="vehicle-card">
+                    <div class="vehicle-card-header">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <h6 class="mb-0">
+                                <span class="badge bg-dark placa-badge"><?= $vehiculo['placa'] ?></span>
+                            </h6>
+                            <span class="badge bg-info"><?= ucfirst($vehiculo['tipo_usuario']) ?></span>
+                        </div>
+                    </div>
+                    <div class="vehicle-card-body">
+                        <div class="row">
+                            <div class="col-4">
+                                <?php if (!empty($vehiculo['foto_vehiculo'])): ?>
+                                    <img src="../<?= $vehiculo['foto_vehiculo'] ?>" 
+                                         alt="Foto vehículo" 
+                                         class="vehicle-img-mobile w-100"
+                                         title="Foto del vehículo">
+                                <?php else: ?>
+                                    <div class="vehicle-img-mobile bg-light d-flex align-items-center justify-content-center w-100">
+                                        <i class="fas fa-car text-muted"></i>
+                                    </div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="col-8">
+                                <div class="vehicle-info">
+                                    <strong>Vehículo:</strong>
+                                    <span><?= ucfirst($vehiculo['tipo_vehiculo']) ?></span>
+                                </div>
+                                <?php if (!empty($vehiculo['marca'])): ?>
+                                <div class="vehicle-info">
+                                    <strong>Marca:</strong>
+                                    <span><?= $vehiculo['marca'] ?></span>
+                                </div>
+                                <?php endif; ?>
+                                <?php if (!empty($vehiculo['color'])): ?>
+                                <div class="vehicle-info">
+                                    <strong>Color:</strong>
+                                    <span class="badge bg-light text-dark"><?= $vehiculo['color'] ?></span>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                        
+                        <div class="vehicle-info">
+                            <strong>Propietario:</strong>
+                            <span><?= htmlspecialchars($vehiculo['nombre_completo']) ?></span>
+                        </div>
+                        <div class="vehicle-info">
+                            <strong>Cédula:</strong>
+                            <span><code><?= $vehiculo['cedula'] ?></code></span>
+                        </div>
+                        <div class="vehicle-info">
+                            <strong>Email:</strong>
+                            <span class="text-muted"><?= $vehiculo['email'] ?></span>
+                        </div>
+                        <div class="vehicle-info">
+                            <strong>Fecha:</strong>
+                            <span><?= date('d/m/Y H:i', strtotime($vehiculo['fecha_registro'])) ?></span>
+                        </div>
+                        
+                        <div class="btn-group-mobile">
+                            <a href="ver_usuario.php?id=<?= $vehiculo['usuario_id'] ?>" 
+                               class="btn btn-sm btn-primary">
+                                <i class="fas fa-user me-1"></i> Ver
+                            </a>
+                            <a href="editar_usuario.php?id=<?= $vehiculo['usuario_id'] ?>" 
+                               class="btn btn-sm btn-warning">
+                                <i class="fas fa-edit me-1"></i> Editar
+                            </a>
+                        </div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
             <!-- Información de resumen -->
-            <div class="row mt-4">
+            <div class="row mt-4 stats-row-mobile">
                 <div class="col-md-4">
                     <div class="card bg-light">
                         <div class="card-body text-center">
