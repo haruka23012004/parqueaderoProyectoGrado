@@ -4,7 +4,7 @@ require '../includes/conexion.php';
 
 // Verificar que sea administrador - CORREGIDO
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'administrador_principal') {
-    header('Location: /../paneles/administrador.php');
+    header('Location: ' . BASE_URL . 'paneles/administrador.php');
     exit();
 }
 
