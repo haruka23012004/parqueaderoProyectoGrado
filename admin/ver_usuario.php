@@ -4,7 +4,7 @@ require '../includes/conexion.php';
 
 // Verificar que sea administrador
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'administrador_principal') {
-    header('Location: /PARQUEADEROPROYECTOGRADO/paneles/administrador.php');
+    header('Location: /ParqueaderoProyectoGrado/paneles/administrador.php');
     exit();
 }
 
