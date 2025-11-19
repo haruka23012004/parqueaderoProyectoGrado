@@ -15,6 +15,12 @@ $query = "SELECT u.*, v.tipo as tipo_vehiculo, v.placa, v.marca, v.color
           WHERE u.estado = 'pendiente' 
           ORDER BY u.fecha_registro DESC";
 $result = $conn->query($query);
+
+// Guardar los resultados en un array para usarlos múltiples veces
+$solicitudes = [];
+while ($solicitud = $result->fetch_assoc()) {
+    $solicitudes[] = $solicitud;
+}
 ?>
 
 <!DOCTYPE html>
@@ -66,32 +72,27 @@ $result = $conn->query($query);
             .cards-mobile {
                 display: block;
             }
-            .container {
-                padding: 10px;
-            }
         }
         @media (min-width: 769px) {
             .cards-mobile {
                 display: none;
             }
             .table-desktop {
-                display: table;
+                display: block;
             }
         }
-        .badge-responsive {
-            font-size: 0.75em;
-            padding: 4px 8px;
-        }
-        .actions-header {
-            min-width: 200px;
+        .table-responsive {
+            border-radius: 8px;
+            overflow: hidden;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
         }
     </style>
 </head>
 <body>
     <?php include '../navbar.php'; ?>
     
-    <div class="container mt-3 mt-md-4">
-        <h2 class="mb-3 mb-md-4"><i class="fas fa-clock"></i> Solicitudes Pendientes de Aprobación</h2>
+    <div class="container mt-4">
+        <h2 class="mb-4"><i class="fas fa-clock"></i> Solicitudes Pendientes de Aprobación</h2>
         
         <?php if (isset($_GET['msg'])): ?>
             <div class="alert alert-success"><?= htmlspecialchars($_GET['msg']) ?></div>
@@ -113,17 +114,17 @@ $result = $conn->query($query);
                         <th>Tipo</th>
                         <th>Vehículo</th>
                         <th>Fecha Registro</th>
-                        <th class="actions-header">Acciones</th>
+                        <th>Acciones</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php while ($solicitud = $result->fetch_assoc()): ?>
+                    <?php foreach ($solicitudes as $solicitud): ?>
                     <tr>
                         <td><?= $solicitud['id'] ?></td>
                         <td><?= htmlspecialchars($solicitud['nombre_completo']) ?></td>
                         <td><?= htmlspecialchars($solicitud['cedula']) ?></td>
                         <td><?= htmlspecialchars($solicitud['email']) ?></td>
-                        <td><span class="badge bg-info badge-responsive"><?= $solicitud['tipo'] ?></span></td>
+                        <td><span class="badge bg-info"><?= $solicitud['tipo'] ?></span></td>
                         <td>
                             <?php if ($solicitud['tipo_vehiculo']): ?>
                                 <?= $solicitud['tipo_vehiculo'] ?> (<?= $solicitud['placa'] ?>)
@@ -146,23 +147,19 @@ $result = $conn->query($query);
                             </div>
                         </td>
                     </tr>
-                    <?php endwhile; ?>
+                    <?php endforeach; ?>
                 </tbody>
             </table>
         </div>
         
         <!-- Vista de tarjetas para móviles -->
         <div class="cards-mobile">
-            <?php 
-            // Reiniciar el puntero del resultado para recorrerlo de nuevo
-            $result->data_seek(0);
-            while ($solicitud = $result->fetch_assoc()): 
-            ?>
+            <?php foreach ($solicitudes as $solicitud): ?>
             <div class="solicitud-card">
                 <div class="solicitud-header">
                     <div class="d-flex justify-content-between align-items-center">
                         <h6 class="mb-0">Solicitud #<?= $solicitud['id'] ?></h6>
-                        <span class="badge bg-info badge-responsive"><?= $solicitud['tipo'] ?></span>
+                        <span class="badge bg-info"><?= $solicitud['tipo'] ?></span>
                     </div>
                 </div>
                 <div class="solicitud-body">
@@ -201,10 +198,10 @@ $result = $conn->query($query);
                     </div>
                 </div>
             </div>
-            <?php endwhile; ?>
+            <?php endforeach; ?>
         </div>
         
-        <?php if ($result->num_rows == 0): ?>
+        <?php if (empty($solicitudes)): ?>
         <div class="alert alert-info text-center">
             <i class="fas fa-info-circle"></i> No hay solicitudes pendientes en este momento.
         </div>
