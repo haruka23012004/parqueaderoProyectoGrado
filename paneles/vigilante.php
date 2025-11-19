@@ -143,13 +143,14 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                                 </a>
                             </div>
 
-                            <!-- salidas con qr -->
+                            <!-- Registrar Salidas -->
                             <div class="col-md-4">
-                                <a href="../vigilante/salida.php" class="btn btn-secondary btn-action w-100 d-flex flex-column align-items-center">
-                                    <i class="fas fa-question-circle fa-3x mb-3"></i>
-                                    <span>Salidas </span>
-                                    <small class="mt-1">📤 Registrar Salida</small>
-                            
+                                <a href="../vigilante/salidas.php" class="btn btn-warning btn-action w-100 d-flex flex-column align-items-center">
+                                    <i class="fas fa-sign-out-alt fa-3x mb-3"></i>
+                                    <span>Registrar Salidas</span>
+                                    <small class="mt-1">Gestionar salidas del parqueadero</small>
+                                </a>
+                            </div>
                             <!-- Registro Manual -->
                             <div class="col-md-4">
                                 <a href="../vigilante/registro_manual.php" class="btn btn-warning btn-action w-100 d-flex flex-column align-items-center">
@@ -177,14 +178,7 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                                 </a>
                             </div>
                             
-                            <!-- Incidencias -->
-                            <div class="col-md-4">
-                                <a href="../vigilante/incidencias.php" class="btn btn-danger btn-action w-100 d-flex flex-column align-items-center">
-                                    <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
-                                    <span>Reportar Incidencia</span>
-                                    <small class="mt-1">Problemas o novedades</small>
-                                </a>
-                            </div>
+                            
                             
                             <!-- Ayuda -->
                             <div class="col-md-4">
