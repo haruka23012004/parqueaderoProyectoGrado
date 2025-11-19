@@ -142,6 +142,13 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                                     <small class="mt-1">Escanear códigos de acceso</small>
                                 </a>
                             </div>
+
+                            <!-- salidas con qr -->
+                            <div class="col-md-4">
+                                <a href="../vigilante/salida.php" class="btn btn-secondary btn-action w-100 d-flex flex-column align-items-center">
+                                    <i class="fas fa-question-circle fa-3x mb-3"></i>
+                                    <span>Salidas </span>
+                                    <small class="mt-1">📤 Registrar Salida</small>
                             
                             <!-- Registro Manual -->
                             <div class="col-md-4">
@@ -187,6 +194,8 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                                     <small class="mt-1">Manual y soporte</small>
                                 </a>
                             </div>
+                            
+
                         </div>
                     </div>
                 </div>
