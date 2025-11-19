@@ -65,6 +65,10 @@ try {
     $_SESSION['rol_nombre'] = $empleado['rol_nombre'];
     $_SESSION['nivel_permiso'] = $empleado['nivel_permiso'];
 
+
+    var_dump(BASE_URL); exit;
+
+
     // Redirige según rol
     redirigirSegunRol();
 
