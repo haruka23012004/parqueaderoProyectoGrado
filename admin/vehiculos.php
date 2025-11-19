@@ -168,7 +168,7 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
     <div class="container-fluid mt-4">
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h2><i class="fas fa-car me-2"></i>Vehículos Registrados</h2>
-            <a href="administrador.php" class="btn btn-outline-primary">
+            <a href="../paneles/administrador.php" class="btn btn-outline-primary">
                 <i class="fas fa-arrow-left me-1"></i> Volver al Dashboard
             </a>
         </div>
@@ -350,14 +350,6 @@ $orden_actual = isset($_GET['orden']) ? $_GET['orden'] : 'fecha_reciente';
                         <div class="card-body text-center">
                             <h5 class="card-title">Total Vehículos</h5>
                             <p class="card-text display-6 text-primary"><?= count($vehiculos) ?></p>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-4">
-                    <div class="card bg-light">
-                        <div class="card-body text-center">
-                            <h5 class="card-title">Tipos Únicos</h5>
-                            <p class="card-text display-6 text-success"><?= count($tipos_vehiculos) ?></p>
                         </div>
                     </div>
                 </div>
