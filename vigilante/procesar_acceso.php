@@ -14,15 +14,15 @@ $hash = trim($_POST['hash']);
 $parqueadero_id = intval($_POST['parqueadero_id']);
 
 try {
-    // Verificar que el parqueadero existe
-    $query_parqueadero = "SELECT id, nombre FROM parqueaderos WHERE id = ?";
+    // Verificar que el parqueadero existe Y tiene capacidad disponible
+    $query_parqueadero = "SELECT id, nombre, capacidad_actual FROM parqueaderos WHERE id = ? AND capacidad_actual > 0";
     $stmt_parqueadero = $conn->prepare($query_parqueadero);
     $stmt_parqueadero->bind_param("i", $parqueadero_id);
     $stmt_parqueadero->execute();
     $parqueadero_result = $stmt_parqueadero->get_result();
     
     if ($parqueadero_result->num_rows === 0) {
-        echo json_encode(['success' => false, 'message' => 'Parqueadero no válido']);
+        echo json_encode(['success' => false, 'message' => 'Parqueadero no disponible o lleno']);
         exit();
     }
     
@@ -54,6 +54,14 @@ try {
     $insertStmt->bind_param("iii", $usuario_id, $userData['vehiculo_id'], $parqueadero_id);
     
     if ($insertStmt->execute()) {
+        // ✅ ACTUALIZAR CAPACIDAD DEL PARQUEADERO (RESTAR 1)
+        $updateQuery = "UPDATE parqueaderos 
+                       SET capacidad_actual = capacidad_actual - 1 
+                       WHERE id = ? AND capacidad_actual > 0";
+        $updateStmt = $conn->prepare($updateQuery);
+        $updateStmt->bind_param("i", $parqueadero_id);
+        $updateStmt->execute();
+        
         echo json_encode([
             'success' => true,
             'data' => [
@@ -62,7 +70,8 @@ try {
                 'tipo' => $userData['tipo'],
                 'placa' => $userData['placa'],
                 'tipo_vehiculo' => $userData['tipo_vehiculo'],
-                'parqueadero' => $parqueadero_data['nombre']
+                'parqueadero' => $parqueadero_data['nombre'],
+                'capacidad_actual' => $parqueadero_data['capacidad_actual'] - 1 // Mostrar nueva capacidad
             ]
         ]);
     } else {
