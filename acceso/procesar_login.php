@@ -6,6 +6,11 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+ini_set('display_errors', 0);
+ini_set('log_errors', 1);
+error_log("Procesando login --- BASE_URL=" . BASE_URL);
+
+
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     setMensaje('danger', 'Método no permitido');
     header('Location: ' . BASE_URL . '/acceso/login.php');
@@ -66,7 +71,8 @@ try {
     $_SESSION['nivel_permiso'] = $empleado['nivel_permiso'];
 
 
-error_log("BASE_URL = " . BASE_URL);
+error_log("ROL DETECTADO: " . $_SESSION['rol_nombre']);
+error_log("URL DE REDIRECCION: " . BASE_URL . "/paneles/" . $_SESSION['rol_nombre'] . ".php");
 
 
 

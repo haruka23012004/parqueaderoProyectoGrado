@@ -26,12 +26,17 @@ function estaAutenticado() {
 }
 
 function redirigirSegunRol() {
+    error_log("Entró a redirigirSegunRol()");
+    error_log("BASE_URL dentro de auth: " . BASE_URL);
+
     if (!estaAutenticado()) {
         header('Location: ' . BASE_URL . '/acceso/login.php');
         exit();
     }
 
+    // AHORA sí definimos $rol
     $rol = $_SESSION['rol_nombre'] ?? '';
+    error_log("ROL dentro de auth: " . $rol);
 
     $paginas = [
         'administrador_principal' => BASE_URL . '/paneles/administrador.php',
@@ -40,6 +45,8 @@ function redirigirSegunRol() {
     ];
 
     if (isset($paginas[$rol])) {
+        error_log("Redirigiendo a: " . $paginas[$rol]);
+
         header('Location: ' . $paginas[$rol]);
         exit();
     }
