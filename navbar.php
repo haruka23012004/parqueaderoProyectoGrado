@@ -15,7 +15,7 @@
                     </a>
                     <a class="nav-link" href="/parqueaderoProyectoGrado/paneles/vigilante.php">Panel Vigilante</a>
                     
-                <?php elseif ($_SESSION['rol_nombre'] == 'empleado_secundario'): ?>
+                <?php elseif ($_SESSION['rol_nombre'] == 'empleado'): ?>
                     <!-- OPCIONES PARA EMPLEADO -->
                     <a class="nav-link" href="/parqueaderoProyectoGrado/paneles/empleado.php">Panel Empleado</a>
                     
