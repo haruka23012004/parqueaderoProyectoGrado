@@ -17,7 +17,8 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
     <title>Lector QR - Entrada Parqueadero</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <script src="https://cdn.jsdelivr.net/npm/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
+    <!-- CDN CORREGIDO -->
+    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
     <style>
         body { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; }
         .scanner-container { background: white; border-radius: 15px; box-shadow: 0 10px 30px rgba(0,0,0,0.3); }
@@ -120,8 +121,17 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        // Verificar que la librería se cargó
+        console.log('Html5QrcodeScanner disponible:', typeof Html5QrcodeScanner !== 'undefined');
+        
         class QRScanner {
             constructor() {
+                // Verificar que la librería esté disponible
+                if (typeof Html5QrcodeScanner === 'undefined') {
+                    this.showError('Error: No se pudo cargar la librería QR. Recarga la página.');
+                    return;
+                }
+                
                 this.html5QrcodeScanner = null;
                 this.isScanning = false;
                 this.initializeElements();
