@@ -4,7 +4,7 @@ require '../includes/conexion.php';
 
 // Verificar que sea administrador
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'administrador_principal') {
-    header('Location: /ParqueaderoProyectoGrado/paneles/administrador.php');
+    header('Location: /parqueaderoProyectoGrado/paneles/administrador.php');
     exit();
 }
 
@@ -40,44 +40,7 @@ if ($resultado->num_rows === 0) {
     die("Error: Usuario no encontrado o no está aprobado");
 }
 
-$usuario = $resultado->fetch_assod();
-
-// Procesar descarga del QR
-if (isset($_GET['descargar_qr']) && $_GET['descargar_qr'] == 'true' && !empty($usuario['qr_code'])) {
-    $qr_path = '../' . $usuario['qr_code'];
-    
-    if (file_exists($qr_path)) {
-        // Obtener información del archivo
-        $file_info = pathinfo($qr_path);
-        $extension = strtolower($file_info['extension']);
-        
-        // Validar que sea una imagen
-        $allowed_extensions = ['png', 'jpg', 'jpeg', 'gif', 'bmp'];
-        if (!in_array($extension, $allowed_extensions)) {
-            die("Error: Formato de archivo no válido");
-        }
-        
-        // Configurar headers para descarga
-        header('Content-Description: File Transfer');
-        header('Content-Type: application/octet-stream');
-        header('Content-Disposition: attachment; filename="qr_' . htmlspecialchars($usuario['cedula']) . '_' . htmlspecialchars($usuario['nombre_completo']) . '.' . $extension . '"');
-        header('Content-Transfer-Encoding: binary');
-        header('Expires: 0');
-        header('Cache-Control: must-revalidate');
-        header('Pragma: public');
-        header('Content-Length: ' . filesize($qr_path));
-        
-        // Limpiar buffer de salida
-        ob_clean();
-        flush();
-        
-        // Leer y enviar el archivo
-        readfile($qr_path);
-        exit;
-    } else {
-        die("Error: El archivo QR no existe");
-    }
-}
+$usuario = $resultado->fetch_assoc();
 ?>
 
 <!DOCTYPE html>
@@ -145,27 +108,6 @@ if (isset($_GET['descargar_qr']) && $_GET['descargar_qr'] == 'true' && !empty($u
             height: 12px;
             border-radius: 50%;
             background: #3498db;
-        }
-        .qr-container {
-            position: relative;
-            display: inline-block;
-        }
-        .qr-download-overlay {
-            position: absolute;
-            top: 0;
-            left: 0;
-            right: 0;
-            bottom: 0;
-            background: rgba(0,0,0,0.7);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            opacity: 0;
-            transition: opacity 0.3s ease;
-            border-radius: 8px;
-        }
-        .qr-container:hover .qr-download-overlay {
-            opacity: 1;
         }
     </style>
 </head>
@@ -340,24 +282,10 @@ if (isset($_GET['descargar_qr']) && $_GET['descargar_qr'] == 'true' && !empty($u
                         <h6 class="mb-0">Código QR de Acceso</h6>
                     </div>
                     <div class="card-body text-center">
-                        <div class="qr-container">
-                            <img src="../<?= htmlspecialchars($usuario['qr_code']) ?>" 
-                                 alt="Código QR" 
-                                 class="qr-code">
-                            <div class="qr-download-overlay">
-                                <a href="?id=<?= $usuario['id'] ?>&descargar_qr=true" 
-                                   class="btn btn-primary btn-sm">
-                                    <i class="fas fa-download me-1"></i> Descargar QR
-                                </a>
-                            </div>
-                        </div>
+                        <img src="../<?= htmlspecialchars($usuario['qr_code']) ?>" 
+                             alt="Código QR" 
+                             class="qr-code">
                         <p class="mt-2 text-muted small">Escanea para verificar acceso</p>
-                        <div class="mt-3">
-                            <a href="?id=<?= $usuario['id'] ?>&descargar_qr=true" 
-                               class="btn btn-success btn-sm">
-                                <i class="fas fa-download me-1"></i> Descargar Código QR
-                            </a>
-                        </div>
                     </div>
                 </div>
                 <?php endif; ?>
@@ -372,11 +300,6 @@ if (isset($_GET['descargar_qr']) && $_GET['descargar_qr'] == 'true' && !empty($u
             <a href="editar_usuario.php?id=<?= $usuario['id'] ?>" class="btn btn-warning">
                 <i class="fas fa-edit me-1"></i> Editar Usuario
             </a>
-            <?php if (!empty($usuario['qr_code'])): ?>
-            <a href="?id=<?= $usuario['id'] ?>&descargar_qr=true" class="btn btn-info">
-                <i class="fas fa-qrcode me-1"></i> Descargar QR
-            </a>
-            <?php endif; ?>
             <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
                 <i class="fas fa-trash me-1"></i> Eliminar Usuario
             </button>
