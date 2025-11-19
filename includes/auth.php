@@ -4,28 +4,17 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
-/*
- * BASE_URL = Carpeta principal del proyecto
- * Ejemplo automático:
- *   http://localhost/PARQUEADEROPROYECTOGRADO/acceso/login.php
- *
- * $_SERVER['SCRIPT_NAME'] devuelve:
- *   /PARQUEADEROPROYECTOGRADO/acceso/login.php
- *
- * dirname(dirname(...)) devuelve:
- *   /PARQUEADEROPROYECTOGRADO
- */
+// ---------------- BASE_URL UNIVERSAL ---------------- //
 
-$root = dirname(dirname($_SERVER['SCRIPT_NAME']));
-$root = str_replace('\\', '/', $root);
-$root = rtrim($root, '/');
-define('BASE_URL', $root);
+$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME']));
 
-/*
- * BASE_URL ahora SIEMPRE es:
- *   /PARQUEADEROPROYECTOGRADO
- *   (sin importar desde qué carpeta entres)
- */
+if ($scriptDir === '/' || $scriptDir === '\\') {
+    define('BASE_URL', '');
+} else {
+    $partes = explode('/', trim($scriptDir, '/'));
+    $rootFolder = '/' . $partes[0];
+    define('BASE_URL', $rootFolder);
+}
 
 // ---------------- FUNCIONES ---------------- //
 

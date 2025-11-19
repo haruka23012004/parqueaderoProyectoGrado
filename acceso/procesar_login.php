@@ -8,7 +8,7 @@ if (session_status() === PHP_SESSION_NONE) {
 
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     setMensaje('danger', 'Método no permitido');
-    header('Location: ' . BASE_URL . '/login.php');
+    header('Location: ' . BASE_URL . '/acceso/login.php');
     exit();
 }
 
@@ -17,7 +17,7 @@ $password = $_POST['password'] ?? '';
 
 if (empty($usuario) || empty($password)) {
     setMensaje('danger', 'Usuario y contraseña son obligatorios');
-    header('Location: ' . BASE_URL . '/login.php');
+    header('Location: ' . BASE_URL . '/acceso/login.php');
     exit();
 }
 
@@ -36,7 +36,7 @@ try {
 
     if (mysqli_num_rows($result) === 0) {
         setMensaje('danger', 'Usuario o contraseña incorrectos');
-        header('Location: ' . BASE_URL . '/login.php');
+        header('Location: ' . BASE_URL . '/acceso/login.php');
         exit();
     }
 
@@ -44,7 +44,7 @@ try {
 
     if (!password_verify($password, $empleado['password_hash'])) {
         setMensaje('danger', 'Usuario o contraseña incorrectos');
-        header('Location: ' . BASE_URL . '/login.php');
+        header('Location: ' . BASE_URL . '/acceso/login.php');
         exit();
     }
 
@@ -55,21 +55,23 @@ try {
             default => 'No puedes iniciar sesión con este estado'
         };
         setMensaje('danger', $mensaje);
-        header('Location: ' . BASE_URL . '/login.php');
+        header('Location: ' . BASE_URL . '/acceso/login.php');
         exit();
     }
 
+    // Guardar sesión
     $_SESSION['usuario_id'] = $empleado['id'];
     $_SESSION['usuario_login'] = $empleado['usuario_login'];
     $_SESSION['rol_nombre'] = $empleado['rol_nombre'];
     $_SESSION['nivel_permiso'] = $empleado['nivel_permiso'];
 
+    // Redirige según rol
     redirigirSegunRol();
 
 } catch (Exception $e) {
     error_log('Error en login: ' . $e->getMessage());
     setMensaje('danger', 'Error al procesar la solicitud');
-    header('Location: ' . BASE_URL . '/login.php');
+    header('Location: ' . BASE_URL . '/acceso/login.php');
     exit();
 }
 ?>
