@@ -245,23 +245,24 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                     <span class="navbar-brand">Panel de Administración</span>
                     <div class="d-flex align-items-center">
 
-                    <li class="nav-item">
-                        <a class="btn btn-warning text-white fw-bold px-3 py-2 rounded-3 shadow-sm" href="../admin/reportes_carnet_perdido.php">
-                            <i class="fas fa-id-card me-2"></i> 
-                            Reportes Carnet Perdido
-                            <span class="badge bg-danger ms-2">📇</span>
-                        </a>
-                    </li>
-                        <!-- Botón Cambiar Contraseña -->
-                        <a href="cambiar_password.php" class="btn btn-outline-primary me-2">
-                            <i class="bi bi-key"></i> <span class="d-none d-sm-inline">Cambiar Contraseña</span>
-                        </a>
-                        
-                        <!-- Botón Cerrar Sesión -->
-                        <a href="../acceso/logout.php" class="btn btn-outline-danger">
-                            <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
-                        </a>
-                    </div>
+                    <!-- Botón Reportes Carnet Perdido -->
+                    <a href="../admin/reportes_carnet_perdido.php" class="btn btn-outline-warning me-2">
+                        <i class="fas fa-id-card"></i> 
+                        <span class="d-none d-sm-inline">Reportes Carnet Perdido</span>
+                    </a>
+
+                    <!-- Botón Cambiar Contraseña -->
+                    <a href="cambiar_password.php" class="btn btn-outline-primary me-2">
+                        <i class="bi bi-key"></i> 
+                        <span class="d-none d-sm-inline">Cambiar Contraseña</span>
+                    </a>
+
+                    <!-- Botón Cerrar Sesión -->
+                    <a href="../acceso/logout.php" class="btn btn-outline-danger">
+                        <i class="bi bi-box-arrow-right"></i> 
+                        <span class="d-none d-sm-inline">Cerrar Sesión</span>
+                    </a>
+                            </div>
                 </div>
             </nav>
 
