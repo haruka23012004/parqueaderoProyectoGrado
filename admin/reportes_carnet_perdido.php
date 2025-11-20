@@ -8,6 +8,113 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'administrador_principal') 
     exit();
 }
 
+// Procesar exportación a Excel
+if (isset($_GET['exportar']) && $_GET['exportar'] == 'excel') {
+    // Obtener parámetros de filtro para la exportación
+    $busqueda = $_GET['busqueda'] ?? '';
+    $estado = $_GET['estado'] ?? '';
+    $tipo_contacto = $_GET['tipo_contacto'] ?? '';
+    $fecha_desde = $_GET['fecha_desde'] ?? '';
+    $fecha_hasta = $_GET['fecha_hasta'] ?? '';
+    
+    // Construir consulta con los mismos filtros
+    $where_conditions = [];
+    $params = [];
+    $types = '';
+    
+    $query = "SELECT r.*, e.nombre_completo as admin_nombre 
+              FROM reportes_carnet_perdido r 
+              LEFT JOIN empleados e ON r.administrador_id = e.id";
+    
+    if (!empty($busqueda)) {
+        $where_conditions[] = "(r.nombre_completo LIKE ? OR r.cedula LIKE ? OR r.contacto LIKE ? OR r.descripcion LIKE ?)";
+        $params = array_merge($params, ["%$busqueda%", "%$busqueda%", "%$busqueda%", "%$busqueda%"]);
+        $types .= 'ssss';
+    }
+    
+    if (!empty($estado)) {
+        $where_conditions[] = "r.estado = ?";
+        $params[] = $estado;
+        $types .= 's';
+    }
+    
+    if (!empty($tipo_contacto)) {
+        $where_conditions[] = "r.tipo_contacto = ?";
+        $params[] = $tipo_contacto;
+        $types .= 's';
+    }
+    
+    if (!empty($fecha_desde)) {
+        $where_conditions[] = "DATE(r.fecha_reporte) >= ?";
+        $params[] = $fecha_desde;
+        $types .= 's';
+    }
+    
+    if (!empty($fecha_hasta)) {
+        $where_conditions[] = "DATE(r.fecha_reporte) <= ?";
+        $params[] = $fecha_hasta;
+        $types .= 's';
+    }
+    
+    if (!empty($where_conditions)) {
+        $query .= " WHERE " . implode(" AND ", $where_conditions);
+    }
+    
+    $query .= " ORDER BY r.fecha_reporte DESC";
+    
+    // Preparar y ejecutar consulta
+    if (!empty($params)) {
+        $stmt = $conn->prepare($query);
+        $stmt->bind_param($types, ...$params);
+        $stmt->execute();
+        $resultado = $stmt->get_result();
+    } else {
+        $resultado = $conn->query($query);
+    }
+    
+    // Configurar headers para descarga Excel
+    header('Content-Type: application/vnd.ms-excel');
+    header('Content-Disposition: attachment; filename="reportes_carnet_perdido_' . date('Y-m-d') . '.xls"');
+    header('Pragma: no-cache');
+    header('Expires: 0');
+    
+    // Crear contenido Excel
+    echo "<table border='1'>";
+    echo "<tr>";
+    echo "<th>ID</th>";
+    echo "<th>Nombre Completo</th>";
+    echo "<th>Cédula</th>";
+    echo "<th>Contacto</th>";
+    echo "<th>Tipo Contacto</th>";
+    echo "<th>Descripción</th>";
+    echo "<th>Estado</th>";
+    echo "<th>Fecha Reporte</th>";
+    echo "<th>Respuesta Admin</th>";
+    echo "<th>Admin Responsable</th>";
+    echo "<th>Fecha Respuesta</th>";
+    echo "</tr>";
+    
+    while ($reporte = $resultado->fetch_assoc()) {
+        echo "<tr>";
+        echo "<td>" . $reporte['id'] . "</td>";
+        echo "<td>" . $reporte['nombre_completo'] . "</td>";
+        echo "<td>" . $reporte['cedula'] . "</td>";
+        echo "<td>" . $reporte['contacto'] . "</td>";
+        echo "<td>" . ucfirst($reporte['tipo_contacto']) . "</td>";
+        echo "<td>" . $reporte['descripcion'] . "</td>";
+        echo "<td>" . ucfirst($reporte['estado']) . "</td>";
+        echo "<td>" . $reporte['fecha_reporte'] . "</td>";
+        echo "<td>" . ($reporte['respuesta_admin'] ?? '') . "</td>";
+        echo "<td>" . ($reporte['admin_nombre'] ?? '') . "</td>";
+        echo "<td>" . ($reporte['fecha_respuesta'] ?? '') . "</td>";
+        echo "</tr>";
+    }
+    
+    echo "</table>";
+    exit();
+}
+
+
 // Procesar actualización de estado
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['actualizar_estado'])) {
     $reporte_id = (int)$_POST['reporte_id'];
@@ -464,10 +571,28 @@ while ($row = $result_contadores->fetch_assoc()) {
             document.getElementById('mainSearchForm').submit();
         }
 
-        // Exportar reportes (función de ejemplo)
-        function exportarReportes() {
-            alert('Función de exportación - Puedes implementar la descarga de Excel aquí');
-        }
+        // Exportar reportes a Excel
+            function exportarReportes() {
+                // Obtener todos los parámetros del formulario actual
+                const form = document.getElementById('mainSearchForm');
+                const formData = new FormData(form);
+                
+                // Construir URL con parámetros
+                let params = new URLSearchParams();
+                
+                // Agregar todos los parámetros del formulario
+                for (let [key, value] of formData) {
+                    if (value) {
+                        params.append(key, value);
+                    }
+                }
+                
+                // Agregar parámetro de exportación
+                params.append('exportar', 'excel');
+                
+                // Redirigir para descargar
+                window.location.href = 'reportes_carnet_perdido.php?' + params.toString();
+            }
 
         // Auto-submit al cambiar algunos filtros
         document.querySelectorAll('select[name="orden"]').forEach(select => {
