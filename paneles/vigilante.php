@@ -105,16 +105,46 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                     </div>
                 </div>
             </div>
-            <div class="col-md-4">
-                <div class="card card-dashboard bg-success text-white">
-                    <div class="card-body text-center">
-                        <i class="fas fa-parking fa-3x mb-3"></i>
-                        <h5 class="card-title">Vehículos Actuales</h5>
-                        <p class="stats-number"><?= $vehiculos_actuales ?></p>
-                        <small>En parqueadero</small>
-                    </div>
-                </div>
+            <?php
+// Consulta para vehículos actualmente en parqueadero
+$query_vehiculos_actuales = "SELECT COUNT(DISTINCT v.id) as total
+                             FROM vehiculos v
+                             INNER JOIN registros_acceso ra_entrada ON v.id = ra_entrada.vehiculo_id
+                             WHERE ra_entrada.tipo_movimiento = 'entrada'
+                             AND NOT EXISTS (
+                                 SELECT 1 FROM registros_acceso ra_salida 
+                                 WHERE ra_salida.vehiculo_id = v.id 
+                                 AND ra_salida.tipo_movimiento = 'salida'
+                                 AND ra_salida.fecha_hora > ra_entrada.fecha_hora
+                             )";
+
+$result_actuales = $conn->query($query_vehiculos_actuales);
+$vehiculos_actuales = $result_actuales ? $result_actuales->fetch_assoc()['total'] : 0;
+?>
+
+<div class="col-md-4">
+    <div class="card card-dashboard bg-success text-white">
+        <div class="card-body text-center">
+            <i class="fas fa-parking fa-3x mb-3"></i>
+            <h5 class="card-title">Vehículos Actuales</h5>
+            <p class="stats-number"><?= $vehiculos_actuales ?></p>
+            <small>En parqueadero</small>
+            
+            <!-- Debug temporal -->
+            <div class="no-print">
+                <small class="text-warning">
+                    <?php
+                    $query_entradas = "SELECT COUNT(*) as total FROM registros_acceso WHERE tipo_movimiento = 'entrada'";
+                    $query_salidas = "SELECT COUNT(*) as total FROM registros_acceso WHERE tipo_movimiento = 'salida'";
+                    $total_entradas = $conn->query($query_entradas)->fetch_assoc()['total'];
+                    $total_salidas = $conn->query($query_salidas)->fetch_assoc()['total'];
+                    ?>
+                    (Entradas: <?= $total_entradas ?>, Salidas: <?= $total_salidas ?>)
+                </small>
             </div>
+        </div>
+    </div>
+</div>
             <div class="col-md-4">
                 <div class="card card-dashboard bg-info text-white">
                     <div class="card-body text-center">
