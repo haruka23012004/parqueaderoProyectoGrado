@@ -73,25 +73,25 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
 <body>
     <?php include '../navbar.php'; ?>
     
-    <div class="container-fluid mt-4">
-        <!-- Encabezado -->
-        <div class="row mb-4">
-            <div class="col-12">
-                <div class="welcome-section p-4">
-                    <div class="row align-items-center">
-                        <div class="col-md-8">
-                            <h2 class="mb-2">¡Bienvenido, <?= htmlspecialchars($_SESSION['usuario_login']) ?>!</h2>
-                            <p class="mb-0">Panel de control para gestión de accesos al parqueadero</p>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <span class="badge bg-light text-dark fs-6 p-2">
-                                <i class="fas fa-shield-alt me-2"></i>Vigilante
-                            </span>
-                        </div>
+    <!-- Navbar Superior Personalizada para Vigilante -->
+            <nav class="navbar navbar-expand-lg navbar-dark bg-dark mb-4">
+                <div class="container-fluid">
+                    <span class="navbar-brand">
+                        <i class="fas fa-shield-alt me-2"></i>Panel de Vigilante
+                    </span>
+                    <div class="d-flex">
+                        <!-- Botón Cambiar Contraseña -->
+                        <a href="cambiar_password.php" class="btn btn-outline-warning me-2">
+                            <i class="fas fa-key"></i> Cambiar Contraseña
+                        </a>
+                        
+                        <!-- Botón Cerrar Sesión -->
+                        <a href="../acceso/logout.php" class="btn btn-outline-light">
+                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
+                        </a>
                     </div>
                 </div>
-            </div>
-        </div>
+            </nav>
 
         <!-- Tarjetas de Estadísticas -->
         <div class="row g-4 mb-5">
