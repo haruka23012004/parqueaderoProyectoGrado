@@ -235,33 +235,186 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
             </div>
 
             <!-- Main Content -->
-            <div class="col-lg-10 col-xl-10 main-content">
-                <!-- Navbar superior -->
-            <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                <div class="container-fluid">
-                    <button class="navbar-toggler mobile-menu-btn" type="button">
-                        <span class="navbar-toggler-icon"></span>
-                    </button>
-                    <span class="navbar-brand">Panel de Administración</span>
-                    <div class="d-flex align-items-center">
+<div class="col-lg-10 col-xl-10 main-content">
+    <!-- Navbar superior mejorado -->
+    <nav class="navbar navbar-expand-lg admin-top-navbar">
+        <div class="container-fluid">
+            <button class="navbar-toggler mobile-menu-btn" type="button">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            
+            <span class="navbar-brand">
+                <i class="fas fa-tachometer-alt me-2"></i>
+                Panel de Administración
+            </span>
+            
+            <div class="d-flex align-items-center admin-top-actions">
+                <!-- Botón Reportes Carnet Perdido -->
+                <a href="../admin/reportes_carnet_perdido.php" class="btn btn-reportes me-2">
+                    <i class="fas fa-id-card me-2"></i>
+                    <span class="d-none d-sm-inline">Reportes Carnet Perdido</span>
+                    <span class="notification-badge">3</span>
+                </a>
+                
+                <!-- Botón Cambiar Contraseña -->
+                <a href="cambiar_password.php" class="btn btn-password me-2">
+                    <i class="fas fa-key me-2"></i>
+                    <span class="d-none d-sm-inline">Cambiar Contraseña</span>
+                </a>
+                
+                <!-- Botón Cerrar Sesión -->
+                <a href="../acceso/logout.php" class="btn btn-logout">
+                    <i class="fas fa-sign-out-alt me-2"></i>
+                    <span class="d-none d-sm-inline">Cerrar Sesión</span>
+                </a>
+            </div>
+        </div>
+    </nav>
 
-                    <li class="nav-item">
-                        <a class="nav-link" href="../admin/reportes_carnet_perdido.php">
-                            <i class="fas fa-id-card"></i> Reportes Carnet Perdido
-                        </a>
-                    </li>
-                        <!-- Botón Cambiar Contraseña -->
-                        <a href="cambiar_password.php" class="btn btn-outline-primary me-2">
-                            <i class="bi bi-key"></i> <span class="d-none d-sm-inline">Cambiar Contraseña</span>
-                        </a>
-                        
-                        <!-- Botón Cerrar Sesión -->
-                        <a href="../acceso/logout.php" class="btn btn-outline-danger">
-                            <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
-                        </a>
-                    </div>
-                </div>
-            </nav>
+    <style>
+        .admin-top-navbar {
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+            padding: 12px 20px;
+            border-bottom: 3px solid #FF6B35;
+        }
+        
+        .admin-top-navbar .navbar-brand {
+            color: #ffffff;
+            font-weight: 700;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+        
+        .admin-top-navbar .navbar-brand i {
+            color: #FF6B35;
+        }
+        
+        .admin-top-actions {
+            gap: 8px;
+        }
+        
+        .btn-reportes {
+            background: linear-gradient(135deg, #FF6B35, #FF8C42);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
+            transition: all 0.3s ease;
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+        
+        .btn-reportes:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
+            color: white;
+        }
+        
+        .btn-password {
+            background: linear-gradient(135deg, #3498db, #2980b9);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(52, 152, 219, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .btn-password:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
+            color: white;
+        }
+        
+        .btn-logout {
+            background: linear-gradient(135deg, #e74c3c, #c0392b);
+            border: none;
+            color: white;
+            font-weight: 600;
+            padding: 10px 20px;
+            border-radius: 8px;
+            box-shadow: 0 3px 8px rgba(231, 76, 60, 0.3);
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+        }
+        
+        .btn-logout:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
+            color: white;
+        }
+        
+        .notification-badge {
+            background: #e74c3c;
+            color: white;
+            border-radius: 50%;
+            width: 20px;
+            height: 20px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 0.7rem;
+            font-weight: bold;
+            margin-left: 8px;
+        }
+        
+        /* Responsive */
+        @media (max-width: 768px) {
+            .admin-top-navbar {
+                padding: 10px 15px;
+            }
+            
+            .admin-top-navbar .navbar-brand {
+                font-size: 1.1rem;
+            }
+            
+            .btn-reportes,
+            .btn-password,
+            .btn-logout {
+                padding: 8px 15px;
+                font-size: 0.9rem;
+            }
+            
+            .btn-reportes .d-none,
+            .btn-password .d-none,
+            .btn-logout .d-none {
+                display: none !important;
+            }
+            
+            .notification-badge {
+                margin-left: 4px;
+            }
+        }
+        
+        @media (max-width: 576px) {
+            .admin-top-actions {
+                gap: 6px;
+            }
+            
+            .btn-reportes,
+            .btn-password,
+            .btn-logout {
+                padding: 6px 12px;
+                font-size: 0.8rem;
+            }
+            
+            .btn-reportes .me-2,
+            .btn-password .me-2,
+            .btn-logout .me-2 {
+                margin-right: 4px !important;
+            }
+        }
+    </style>
+</div>
 
                 <div class="container-fluid p-3 p-md-4">
                     <div class="row mb-4">
