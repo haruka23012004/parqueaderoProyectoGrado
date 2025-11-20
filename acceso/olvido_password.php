@@ -1,6 +1,10 @@
 <?php
-session_start();
+require_once '../includes/auth.php';
 require_once '../includes/conexion.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 ?>
 
 <!DOCTYPE html>
@@ -43,20 +47,15 @@ require_once '../includes/conexion.php';
             </div>
 
             <div class="p-4">
-                <?php if (isset($_SESSION['mensaje'])): ?>
-                    <div class="alert alert-<?= $_SESSION['tipo_mensaje'] ?>">
-                        <?= $_SESSION['mensaje'] ?>
-                    </div>
-                    <?php unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']); ?>
-                <?php endif; ?>
+                <?php mostrarMensaje(); ?>
 
-                <form method="POST" action="solicitar_reset.php">
+                <form method="POST" action="procesar_reset.php">
                     <div class="mb-3">
                         <label for="email" class="form-label">
                             <i class="fas fa-envelope me-2"></i>Correo Electrónico
                         </label>
                         <input type="email" class="form-control form-control-lg" id="email" name="email" 
-                               placeholder="tu@email.com" required>
+                               placeholder="tu@uniguajira.edu.co" required>
                         <div class="form-text">
                             Te enviaremos un enlace para restablecer tu contraseña.
                         </div>

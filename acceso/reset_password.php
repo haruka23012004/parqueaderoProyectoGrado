@@ -1,29 +1,42 @@
 <?php
-session_start();
-require_once '../includes/conexion.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/conexion.php';
+
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
 
 $token = $_GET['token'] ?? '';
-$error = '';
-$valido = false;
 
 if (empty($token)) {
-    $error = 'Token inválido o faltante.';
-} else {
-    // Verificar token válido y no expirado
-    $query = "SELECT id, nombre_completo, token_expiracion 
-              FROM empleados 
-              WHERE token_reset = ? AND token_expiracion > NOW()";
-    $stmt = $conn->prepare($query);
-    $stmt->bind_param("s", $token);
-    $stmt->execute();
-    $result = $stmt->get_result();
-    
-    if ($result->num_rows === 1) {
-        $usuario = $result->fetch_assoc();
-        $valido = true;
-    } else {
-        $error = 'El enlace de recuperación ha expirado o es inválido.';
+    setMensaje('danger', 'Token de recuperación inválido');
+    header('Location: ' . BASE_URL . '/acceso/login.php');
+    exit();
+}
+
+// Verificar si el token es válido y no ha expirado
+try {
+    $sql = "SELECT id, nombre_completo, usuario_login, token_expiracion 
+            FROM empleados 
+            WHERE token_reset = ? AND token_expiracion > NOW() AND estado = 'active'";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "s", $token);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    if (mysqli_num_rows($result) === 0) {
+        setMensaje('danger', 'El enlace de recuperación ha expirado o es inválido');
+        header('Location: ' . BASE_URL . '/acceso/login.php');
+        exit();
     }
+
+    $empleado = mysqli_fetch_assoc($result);
+
+} catch (Exception $e) {
+    error_log('Error verificando token: ' . $e->getMessage());
+    setMensaje('danger', 'Error al validar el enlace de recuperación');
+    header('Location: ' . BASE_URL . '/acceso/login.php');
+    exit();
 }
 ?>
 
@@ -60,10 +73,8 @@ if (empty($token)) {
             height: 5px;
             margin-top: 5px;
             border-radius: 5px;
+            transition: all 0.3s ease;
         }
-        .strength-weak { background-color: #dc3545; width: 25%; }
-        .strength-medium { background-color: #ffc107; width: 50%; }
-        .strength-strong { background-color: #28a745; width: 100%; }
     </style>
 </head>
 <body>
@@ -71,128 +82,102 @@ if (empty($token)) {
         <div class="reset-container">
             <div class="header-section">
                 <h1><i class="fas fa-lock me-2"></i>Nueva Contraseña</h1>
-                <p class="mb-0">Crea una nueva contraseña para tu cuenta</p>
+                <p class="mb-0">Hola, <?php echo htmlspecialchars($empleado['nombre_completo']); ?></p>
             </div>
 
             <div class="p-4">
-                <?php if ($error): ?>
-                    <div class="alert alert-danger">
-                        <i class="fas fa-exclamation-triangle me-2"></i><?= $error ?>
+                <?php mostrarMensaje(); ?>
+
+                <form method="POST" action="procesar_nueva_password.php">
+                    <input type="hidden" name="token" value="<?php echo htmlspecialchars($token); ?>">
+                    
+                    <div class="mb-3">
+                        <label for="nueva_password" class="form-label">
+                            <i class="fas fa-key me-2"></i>Nueva Contraseña
+                        </label>
+                        <input type="password" class="form-control form-control-lg" 
+                               id="nueva_password" name="nueva_password" 
+                               placeholder="Ingresa tu nueva contraseña" required
+                               minlength="8">
+                        <div class="password-strength" id="passwordStrength"></div>
+                        <div class="form-text">
+                            La contraseña debe tener al menos 8 caracteres.
+                        </div>
                     </div>
-                    <div class="d-grid">
-                        <a href="olvido_password.php" class="btn btn-primary">
-                            <i class="fas fa-redo me-2"></i>Solicitar Nuevo Enlace
+
+                    <div class="mb-3">
+                        <label for="confirmar_password" class="form-label">
+                            <i class="fas fa-check-circle me-2"></i>Confirmar Contraseña
+                        </label>
+                        <input type="password" class="form-control form-control-lg" 
+                               id="confirmar_password" name="confirmar_password" 
+                               placeholder="Confirma tu nueva contraseña" required>
+                        <div class="form-text" id="passwordMatch"></div>
+                    </div>
+
+                    <div class="d-grid gap-2">
+                        <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
+                            <i class="fas fa-save me-2"></i>Guardar Nueva Contraseña
+                        </button>
+                        <a href="login.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver al Login
                         </a>
                     </div>
-                <?php elseif ($valido): ?>
-                    
-                    <?php if (isset($_SESSION['mensaje'])): ?>
-                        <div class="alert alert-<?= $_SESSION['tipo_mensaje'] ?>">
-                            <?= $_SESSION['mensaje'] ?>
-                        </div>
-                        <?php unset($_SESSION['mensaje'], $_SESSION['tipo_mensaje']); ?>
-                    <?php endif; ?>
-
-                    <form method="POST" action="procesar_reset.php" id="reset-form">
-                        <input type="hidden" name="token" value="<?= htmlspecialchars($token) ?>">
-                        
-                        <div class="mb-3">
-                            <label for="password" class="form-label">
-                                <i class="fas fa-key me-2"></i>Nueva Contraseña
-                            </label>
-                            <input type="password" class="form-control form-control-lg" id="password" name="password" 
-                                   placeholder="Ingresa tu nueva contraseña" required minlength="8">
-                            <div class="password-strength" id="password-strength"></div>
-                            <div class="form-text">
-                                La contraseña debe tener al menos 8 caracteres.
-                            </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="confirm_password" class="form-label">
-                                <i class="fas fa-check-circle me-2"></i>Confirmar Contraseña
-                            </label>
-                            <input type="password" class="form-control form-control-lg" id="confirm_password" 
-                                   placeholder="Repite tu nueva contraseña" required>
-                            <div class="form-text" id="password-match"></div>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button type="submit" class="btn btn-primary btn-lg" id="submit-btn">
-                                <i class="fas fa-save me-2"></i>Guardar Nueva Contraseña
-                            </button>
-                            <a href="login.php" class="btn btn-outline-secondary">
-                                <i class="fas fa-arrow-left me-2"></i>Volver al Login
-                            </a>
-                        </div>
-                    </form>
-
-                <?php endif; ?>
+                </form>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Validación de fortaleza de contraseña
-        document.getElementById('password').addEventListener('input', function() {
-            const password = this.value;
-            const strengthBar = document.getElementById('password-strength');
-            let strength = 0;
-            
-            if (password.length >= 8) strength += 1;
-            if (password.match(/[a-z]/)) strength += 1;
-            if (password.match(/[A-Z]/)) strength += 1;
-            if (password.match(/[0-9]/)) strength += 1;
-            if (password.match(/[^a-zA-Z0-9]/)) strength += 1;
-            
-            strengthBar.className = 'password-strength ';
-            if (password.length === 0) {
-                strengthBar.style.width = '0%';
-            } else if (strength <= 2) {
-                strengthBar.className += 'strength-weak';
-            } else if (strength <= 4) {
-                strengthBar.className += 'strength-medium';
-            } else {
-                strengthBar.className += 'strength-strong';
-            }
-        });
+        document.addEventListener('DOMContentLoaded', function() {
+            const nuevaPassword = document.getElementById('nueva_password');
+            const confirmarPassword = document.getElementById('confirmar_password');
+            const passwordStrength = document.getElementById('passwordStrength');
+            const passwordMatch = document.getElementById('passwordMatch');
+            const submitBtn = document.getElementById('submitBtn');
 
-        // Validación de coincidencia de contraseñas
-        document.getElementById('confirm_password').addEventListener('input', function() {
-            const password = document.getElementById('password').value;
-            const confirm = this.value;
-            const matchText = document.getElementById('password-match');
-            const submitBtn = document.getElementById('submit-btn');
-            
-            if (confirm.length === 0) {
-                matchText.innerHTML = '';
-                submitBtn.disabled = true;
-            } else if (password === confirm) {
-                matchText.innerHTML = '<span class="text-success">✓ Las contraseñas coinciden</span>';
-                submitBtn.disabled = false;
-            } else {
-                matchText.innerHTML = '<span class="text-danger">✗ Las contraseñas no coinciden</span>';
-                submitBtn.disabled = true;
-            }
-        });
+            function checkPasswordStrength(password) {
+                let strength = 0;
+                if (password.length >= 8) strength += 25;
+                if (/[A-Z]/.test(password)) strength += 25;
+                if (/[0-9]/.test(password)) strength += 25;
+                if (/[^A-Za-z0-9]/.test(password)) strength += 25;
 
-        // Validación del formulario
-        document.getElementById('reset-form').addEventListener('submit', function(e) {
-            const password = document.getElementById('password').value;
-            const confirm = document.getElementById('confirm_password').value;
-            
-            if (password.length < 8) {
-                e.preventDefault();
-                alert('La contraseña debe tener al menos 8 caracteres.');
-                return;
+                passwordStrength.style.width = strength + '%';
+                if (strength < 50) {
+                    passwordStrength.style.backgroundColor = '#dc3545';
+                } else if (strength < 75) {
+                    passwordStrength.style.backgroundColor = '#ffc107';
+                } else {
+                    passwordStrength.style.backgroundColor = '#28a745';
+                }
             }
-            
-            if (password !== confirm) {
-                e.preventDefault();
-                alert('Las contraseñas no coinciden.');
-                return;
+
+            function checkPasswordMatch() {
+                if (confirmarPassword.value === '') {
+                    passwordMatch.textContent = '';
+                    passwordMatch.className = 'form-text';
+                    return;
+                }
+
+                if (nuevaPassword.value === confirmarPassword.value) {
+                    passwordMatch.textContent = '✓ Las contraseñas coinciden';
+                    passwordMatch.className = 'form-text text-success';
+                    submitBtn.disabled = false;
+                } else {
+                    passwordMatch.textContent = '✗ Las contraseñas no coinciden';
+                    passwordMatch.className = 'form-text text-danger';
+                    submitBtn.disabled = true;
+                }
             }
+
+            nuevaPassword.addEventListener('input', function() {
+                checkPasswordStrength(this.value);
+                checkPasswordMatch();
+            });
+
+            confirmarPassword.addEventListener('input', checkPasswordMatch);
         });
     </script>
 </body>

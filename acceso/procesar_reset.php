@@ -1,55 +1,155 @@
 <?php
-session_start();
-require_once '../includes/conexion.php';
+require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/conexion.php';
 
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $token = $_POST['token'] ?? '';
-    $nueva_password = $_POST['password'] ?? '';
-    
-    try {
-        // Validaciones
-        if (empty($token) || empty($nueva_password)) {
-            throw new Exception('Datos incompletos.');
-        }
-        
-        if (strlen($nueva_password) < 8) {
-            throw new Exception('La contraseña debe tener al menos 8 caracteres.');
-        }
-        
-        // Verificar token válido
-        $query = "SELECT id FROM empleados WHERE token_reset = ? AND token_expiracion > NOW()";
-        $stmt = $conn->prepare($query);
-        $stmt->bind_param("s", $token);
-        $stmt->execute();
-        $result = $stmt->get_result();
-        
-        if ($result->num_rows === 0) {
-            throw new Exception('El enlace de recuperación ha expirado o es inválido.');
-        }
-        
-        $usuario = $result->fetch_assoc();
-        
-        // Hashear nueva contraseña
-        $password_hash = password_hash($nueva_password, PASSWORD_DEFAULT);
-        
-        // Actualizar contraseña y limpiar token
-        $query_update = "UPDATE empleados SET password_hash = ?, token_reset = NULL, token_expiracion = NULL WHERE id = ?";
-        $stmt_update = $conn->prepare($query_update);
-        $stmt_update->bind_param("si", $password_hash, $usuario['id']);
-        
-        if ($stmt_update->execute()) {
-            $_SESSION['mensaje'] = '✅ Tu contraseña ha sido restablecida correctamente. Ahora puedes iniciar sesión.';
-            $_SESSION['tipo_mensaje'] = 'success';
-            header('Location: login.php');
-            exit();
-        } else {
-            throw new Exception('Error al actualizar la contraseña.');
-        }
-        
-    } catch (Exception $e) {
-        $_SESSION['mensaje'] = '❌ Error: ' . $e->getMessage();
-        $_SESSION['tipo_mensaje'] = 'danger';
-        header('Location: reset_password.php?token=' . urlencode($token));
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+    setMensaje('danger', 'Método no permitido');
+    header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
+    exit();
+}
+
+$email = trim($_POST['email'] ?? '');
+
+if (empty($email)) {
+    setMensaje('danger', 'El correo electrónico es obligatorio');
+    header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
+    exit();
+}
+
+// Validar dominios de email permitidos
+$dominiosPermitidos = ['gmail.com', 'uniguajira.edu.co'];
+$dominio = strtolower(substr(strrchr($email, "@"), 1));
+
+if (!in_array($dominio, $dominiosPermitidos)) {
+    setMensaje('danger', 'Solo se permiten correos de @gmail.com y @uniguajira.edu.co');
+    header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
+    exit();
+}
+
+try {
+    // Verificar si el email existe en la base de datos
+    $sql = "SELECT id, nombre_completo, usuario_login, estado FROM empleados WHERE email = ? AND estado = 'active'";
+    $stmt = mysqli_prepare($conn, $sql);
+    mysqli_stmt_bind_param($stmt, "s", $email);
+    mysqli_stmt_execute($stmt);
+    $result = mysqli_stmt_get_result($stmt);
+
+    if (mysqli_num_rows($result) === 0) {
+        // Por seguridad, no revelamos si el email existe o no
+        setMensaje('success', 'Si el email existe en nuestro sistema, recibirás un enlace para restablecer tu contraseña.');
+        header('Location: ' . BASE_URL . '/acceso/login.php');
         exit();
     }
+
+    $empleado = mysqli_fetch_assoc($result);
+
+    // Generar token único
+    $token = bin2hex(random_bytes(32));
+    $expiracion = date('Y-m-d H:i:s', strtotime('+1 hour'));
+
+    // Guardar token en la base de datos
+    $sqlUpdate = "UPDATE empleados SET token_reset = ?, token_expiracion = ? WHERE email = ?";
+    $stmtUpdate = mysqli_prepare($conn, $sqlUpdate);
+    mysqli_stmt_bind_param($stmtUpdate, "sss", $token, $expiracion, $email);
+    
+    if (!mysqli_stmt_execute($stmtUpdate)) {
+        throw new Exception('Error al guardar el token de recuperación');
+    }
+
+    // Configurar PHPMailer para Hostinger (sin configuración adicional)
+    require_once __DIR__ . '/../PHPMailer-master/src/PHPMailer.php';
+    require_once __DIR__ . '/../PHPMailer-master/src/SMTP.php';
+    require_once __DIR__ . '/../PHPMailer-master/src/Exception.php';
+
+    $mail = new PHPMailer\PHPMailer\PHPMailer(true);
+
+    try {
+        // Configuración automática para Hostinger
+        $mail->isSMTP();
+        $mail->Host = 'localhost';
+        $mail->SMTPAuth = false;
+        $mail->Port = 25;
+        
+        // Email FROM automático basado en el dominio
+        $dominio = $_SERVER['HTTP_HOST'];
+        $mail->setFrom('sistema@' . $dominio, 'Sistema de Parqueadero');
+
+        // Destinatarios
+        $mail->addAddress($email, $empleado['nombre_completo']);
+
+        // Contenido
+        $mail->isHTML(true);
+        $mail->Subject = 'Recuperación de Contraseña - Sistema Parqueadero';
+        
+        $resetLink = "https://" . $dominio . BASE_URL . "/acceso/reset_password.php?token=" . $token;
+        
+        $mail->Body = "
+            <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
+                <div style='background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 20px; text-align: center;'>
+                    <h2>Universidad de La Guajira</h2>
+                    <h3>Sistema de Parqueadero</h3>
+                </div>
+                
+                <div style='padding: 20px; background: #f8f9fa;'>
+                    <h3>Recuperación de Contraseña</h3>
+                    <p>Hola <strong>{$empleado['nombre_completo']}</strong>,</p>
+                    <p>Has solicitado restablecer tu contraseña para el usuario: <strong>{$empleado['usuario_login']}</strong></p>
+                    
+                    <div style='text-align: center; margin: 30px 0;'>
+                        <a href='{$resetLink}' style='background-color: #28a745; color: white; padding: 12px 24px; text-decoration: none; border-radius: 5px; font-size: 16px; display: inline-block;'>
+                            Restablecer Contraseña
+                        </a>
+                    </div>
+                    
+                    <p><strong>⚠️ Este enlace expirará en 1 hora.</strong></p>
+                    
+                    <div style='background: #fff3cd; border-left: 4px solid #ffc107; padding: 10px; margin: 15px 0;'>
+                        <strong>Seguridad:</strong> Si no solicitaste este cambio, por favor ignora este mensaje.
+                    </div>
+                    
+                    <p>Saludos cordiales,<br>
+                    <strong>Equipo de Sistema de Parqueadero</strong><br>
+                    Universidad de La Guajira</p>
+                </div>
+                
+                <div style='background: #343a40; color: white; padding: 15px; text-align: center; font-size: 12px;'>
+                    © " . date('Y') . " Universidad de La Guajira - Sistema de Parqueadero
+                </div>
+            </div>
+        ";
+        
+        $mail->AltBody = "Recuperación de contraseña para {$empleado['usuario_login']}. Visita: {$resetLink} (Expira en 1 hora)";
+
+        if ($mail->send()) {
+            setMensaje('success', 'Se ha enviado un enlace de recuperación a tu correo electrónico. Revisa tu bandeja de entrada.');
+            header('Location: ' . BASE_URL . '/acceso/login.php');
+            exit();
+        } else {
+            throw new Exception('No se pudo enviar el email');
+        }
+
+    } catch (Exception $e) {
+        // Si falla el email, mostrar mensaje alternativo
+        error_log("Error al enviar email: " . $mail->ErrorInfo);
+        
+        // Opción alternativa: mostrar el token directamente (solo para desarrollo)
+        if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
+            setMensaje('info', "En desarrollo: Token de recuperación - <a href='reset_password.php?token=$token'>Haz clic aquí</a>");
+            header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
+        } else {
+            setMensaje('warning', 'El sistema de email no está disponible temporalmente. Por favor, contacta al administrador.');
+            header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
+        }
+        exit();
+    }
+
+} catch (Exception $e) {
+    error_log('Error en recuperación: ' . $e->getMessage());
+    setMensaje('danger', 'Error al procesar la solicitud');
+    header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
+    exit();
 }
