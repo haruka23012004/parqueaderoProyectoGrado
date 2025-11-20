@@ -1,6 +1,5 @@
 <?php
 require 'includes/conexion.php';
-session_start();
 
 $mensaje = '';
 
@@ -104,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </style>
 </head>
 <body>
-    <!-- Navbar (usa el mismo de tu index.php) -->
+    <!-- Navbar -->
     <nav class="navbar navbar-expand-lg navbar-dark" style="background-color: var(--color-negro) !important;">
         <div class="container">
             <a class="navbar-brand" href="index.php">
