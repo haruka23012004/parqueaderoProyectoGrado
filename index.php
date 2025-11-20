@@ -286,7 +286,7 @@
                 </li>
                 <!-- Botón "Perdí mi Carnet" -->
                 <li class="nav-item">
-                    <a class="nav-link btn-carnet-perdido" href="../paneles/recuperar_carnet.php" style="background-color: var(--color-rojo); color: white !important;">
+                    <a class="nav-link btn-carnet-perdido" href="paneles/recuperar_carnet.php" style="background-color: var(--color-rojo); color: white !important;">
                         <i class="fas fa-id-card"></i> Perdí mi Carnet
                     </a>
                 </li>
