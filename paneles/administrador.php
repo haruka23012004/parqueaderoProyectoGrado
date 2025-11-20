@@ -244,6 +244,12 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                     </button>
                     <span class="navbar-brand">Panel de Administración</span>
                     <div class="d-flex align-items-center">
+
+                    <li class="nav-item">
+                        <a class="nav-link" href="reportes_carnet_perdido.php">
+                            <i class="fas fa-id-card"></i> Reportes Carnet Perdido
+                        </a>
+                    </li>
                         <!-- Botón Cambiar Contraseña -->
                         <a href="cambiar_password.php" class="btn btn-outline-primary me-2">
                             <i class="bi bi-key"></i> <span class="d-none d-sm-inline">Cambiar Contraseña</span>
