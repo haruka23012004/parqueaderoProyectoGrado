@@ -330,24 +330,40 @@ $usuario = $resultado->fetch_assoc();
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
 
-<!-- Estilos para el carnet impreso -->
 <style>
 @media print {
     body * {
         visibility: hidden;
+        margin: 0 !important;
+        padding: 0 !important;
     }
-    .carnet-container, .carnet-container * {
-        visibility: visible;
+    
+    #carnetImprimir,
+    #carnetImprimir * {
+        visibility: visible !important;
     }
-    .carnet-container {
-        position: absolute;
-        left: 0;
-        top: 0;
-        width: 100%;
-        border: none !important;
+    
+    #carnetImprimir {
+        position: fixed !important;
+        left: 50% !important;
+        top: 50% !important;
+        transform: translate(-50%, -50%) !important;
+        width: 400px !important;
+        height: auto !important;
+        margin: 0 !important;
+        padding: 0 !important;
+        border: 2px solid #333 !important;
+        border-radius: 15px !important;
         box-shadow: none !important;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
+        page-break-inside: avoid !important;
+        break-inside: avoid !important;
     }
-    .no-print {
+    
+    .no-print,
+    .modal,
+    .navbar,
+    .container {
         display: none !important;
     }
 }
@@ -374,6 +390,7 @@ $usuario = $resultado->fetch_assoc();
     padding: 20px;
     background: white;
     color: #333;
+    min-height: 400px;
 }
 
 .carnet-photo {
@@ -509,30 +526,46 @@ function imprimirCarnet() {
 }
 
 function imprimirCarnetDirecto() {
-    // Ocultar modal
+    // Ocultar modal primero
     var carnetModal = bootstrap.Modal.getInstance(document.getElementById('carnetModal'));
     carnetModal.hide();
     
-    // Mostrar carnet y imprimir
+    // Pequeña pausa para que se cierre el modal
     setTimeout(function() {
+        // Mostrar el carnet
         var carnet = document.getElementById('carnetImprimir');
         carnet.style.display = 'block';
         
-        window.print();
+        // Forzar reflow para asegurar que se muestre
+        carnet.offsetHeight;
         
-        // Ocultar después de imprimir
-        setTimeout(function() {
-            carnet.style.display = 'none';
-        }, 500);
-    }, 500);
+        // Imprimir
+        window.print();
+    }, 300);
 }
 
-// Configurar impresión
+// Cuando se cierra la impresión, ocultar el carnet
 window.addEventListener('afterprint', function() {
     var carnet = document.getElementById('carnetImprimir');
-    carnet.style.display = 'none';
+    if (carnet) {
+        carnet.style.display = 'none';
+    }
+});
+
+// También ocultar el carnet si se cancela la impresión
+window.addEventListener('beforeprint', function() {
+    console.log('Iniciando impresión...');
+});
+
+// Manejar la tecla ESC para salir del modo impresión
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        var carnet = document.getElementById('carnetImprimir');
+        if (carnet && carnet.style.display === 'block') {
+            carnet.style.display = 'none';
+        }
+    }
 });
 </script>
-
 </body>
 </html>
