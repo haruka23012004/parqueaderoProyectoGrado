@@ -323,7 +323,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                         </a>
                     </div>
                     <div class="col-md-3 col-sm-6">
-                        <a href="../vigilante/consultar_vehiculos.php" class="btn btn-info w-100" target="_blank">
+                        <a href="vigilante.php" class="btn btn-info w-100" target="_blank">
                             <i class="bi bi-eye"></i> Panel Vigilante
                         </a>
                     </div>
