@@ -56,12 +56,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         mysqli_stmt_bind_param($stmt_update, "si", $nueva_password_hash, $_SESSION['usuario_id']);
         
         if (mysqli_stmt_execute($stmt_update)) {
-            $mensaje = "Contraseña cambiada exitosamente. Será redirigido al panel principal.";
+            $mensaje = "Contraseña cambiada exitosamente. Será redirigido al login para iniciar sesión con su nueva contraseña.";
             
-            // Redirigir después de 2 segundos
+            // Redirigir al LOGIN después de 2 segundos
             echo '<script>
                 setTimeout(function() {
-                    window.location.href = "' . BASE_URL . '/paneles/' . $_SESSION["rol_nombre"] . '.php";
+                    window.location.href = "' . BASE_URL . '/acceso/login.php";
                 }, 2000);
             </script>';
         } else {
@@ -188,8 +188,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         <button type="submit" class="btn btn-success btn-lg" id="submitBtn">
                             <i class="fas fa-save me-2"></i>Cambiar Contraseña
                         </button>
-                        <a href="<?= BASE_URL ?>/paneles/<?= $_SESSION['rol_nombre'] ?>.php" class="btn btn-outline-secondary">
-                            <i class="fas fa-arrow-left me-2"></i>Volver al Panel
+                        <a href="<?= BASE_URL ?>/acceso/login.php" class="btn btn-outline-secondary">
+                            <i class="fas fa-arrow-left me-2"></i>Volver al Login
                         </a>
                     </div>
                 </form>
