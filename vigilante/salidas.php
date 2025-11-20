@@ -1,46 +1,11 @@
 <?php
-require_once '../includes/auth.php';
-require_once '../includes/conexion.php';
+require '../includes/auth.php';
+require '../includes/conexion.php';
 
 // Verificar que sea vigilante
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
-    header('Location: /parqueaderoProyectoGrado/acceso/login.php');
+    header('Location: /parqueaderoProyectoGrado/paneles/administrador.php');
     exit();
-}
-
-// Obtener todos los accesos de entrada que no tienen salida registrada
-$query = "SELECT 
-            ra.id as registro_id,
-            u.id as usuario_id,
-            u.codigo_universitario,
-            u.cedula,
-            u.nombre_completo,
-            u.tipo as tipo_usuario,
-            v.placa,
-            v.tipo as tipo_vehiculo,
-            v.marca,
-            v.color,
-            p.nombre as parqueadero_nombre,
-            p.id as parqueadero_id,
-            ra.fecha_hora as fecha_entrada
-          FROM registros_acceso ra
-          INNER JOIN usuarios_parqueadero u ON ra.usuario_id = u.id
-          INNER JOIN vehiculos v ON ra.vehiculo_id = v.id
-          INNER JOIN parqueaderos p ON ra.parqueadero_id = p.id
-          WHERE ra.tipo_movimiento = 'entrada'
-          AND NOT EXISTS (
-              SELECT 1 
-              FROM registros_acceso ra2 
-              WHERE ra2.usuario_id = u.id 
-              AND ra2.tipo_movimiento = 'salida' 
-              AND ra2.fecha_hora > ra.fecha_hora
-          )
-          ORDER BY ra.fecha_hora DESC";
-
-$result = $conn->query($query);
-$accesos = [];
-while ($row = $result->fetch_assoc()) {
-    $accesos[] = $row;
 }
 ?>
 
@@ -49,267 +14,417 @@ while ($row = $result->fetch_assoc()) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Registrar Salidas - Sistema Parqueadero</title>
+    <title>Lector QR - Salida Parqueadero</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- LIBRERÍA LOCAL -->
+    <script src="../assets/js/html5-qrcode.min.js"></script>
     <style>
-        .header-section {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
-            color: white;
-            padding: 30px;
-            margin-bottom: 30px;
+        body { 
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
+            min-height: 100vh; 
+        }
+        .scanner-container { 
+            background: white; 
+            border-radius: 15px; 
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3); 
+            overflow: hidden;
+        }
+        #reader { 
+            width: 100%; 
+            height: 300px; 
+            border: 3px dashed #dc3545; 
+            border-radius: 10px; 
+            background: #f8f9fa;
+        }
+        .user-card { 
+            transition: all 0.3s ease; 
+            border: none; 
+            border-radius: 10px; 
+            box-shadow: 0 5px 15px rgba(0,0,0,0.1); 
+        }
+        .hidden { 
+            display: none; 
+        }
+        .placa-display { 
+            font-family: 'Courier New', monospace; 
+            font-size: 1.5rem; 
+            font-weight: bold; 
+            letter-spacing: 2px; 
+            background: #f8f9fa; 
+            padding: 10px; 
+            border-radius: 5px; 
+        }
+        .scan-animation { 
+            animation: pulse 2s infinite; 
+        }
+        @keyframes pulse { 
+            0% { border-color: #dc3545; } 
+            50% { border-color: #28a745; } 
+            100% { border-color: #dc3545; } 
+        }
+        .loading-text {
+            color: #6c757d;
+            font-style: italic;
+        }
+        .parqueadero-badge {
+            font-size: 1.1rem;
+            padding: 8px 15px;
         }
         .btn-salida {
-            background: linear-gradient(135deg, #ff6b6b 0%, #ee5a52 100%);
+            background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
             border: none;
-            color: white;
-            padding: 8px 20px;
-            border-radius: 8px;
-            transition: all 0.3s ease;
         }
         .btn-salida:hover {
-            transform: scale(1.05);
-            background: linear-gradient(135deg, #ff5252 0%, #e53935 100%);
-        }
-        .acceso-card {
-            border-left: 4px solid #28a745;
-            border-radius: 8px;
-            margin-bottom: 15px;
-            transition: all 0.3s ease;
-        }
-        .acceso-card:hover {
-            box-shadow: 0 5px 15px rgba(0,0,0,0.1);
+            background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
         }
     </style>
 </head>
 <body>
     <?php include '../navbar.php'; ?>
-    
-    <div class="container-fluid mt-4">
-        <!-- Encabezado -->
-        <div class="row">
-            <div class="col-12">
-                <div class="header-section">
-                    <h1><i class="fas fa-sign-out-alt me-2"></i>Registrar Salidas</h1>
-                    <p class="mb-0">¿Quieres registrar una salida del parqueadero? Selecciona un vehículo de la lista</p>
-                </div>
-            </div>
-        </div>
 
-        <!-- Lista de Accesos -->
-        <div class="row">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-dark text-white">
-                        <h4 class="mb-0"><i class="fas fa-list me-2"></i>Accesos Activos en el Parqueadero</h4>
+    <div class="container py-4">
+        <div class="row justify-content-center">
+            <div class="col-lg-8">
+                <div class="text-center text-white mb-4">
+                    <h1><i class="fas fa-sign-out-alt me-2"></i>Salida de Parqueadero</h1>
+                    <p class="lead">Registro de salidas del parqueadero</p>
+                </div>
+
+                <!-- Selector de Parqueadero -->
+                <div class="scanner-container p-4 mb-4">
+                    <div class="text-center mb-3">
+                        <h4 class="text-danger"><i class="fas fa-parking me-2"></i>Seleccionar Parqueadero</h4>
+                        <p class="text-muted">Elija el parqueadero donde registrará las salidas</p>
                     </div>
-                    <div class="card-body">
-                        <?php if (count($accesos) > 0): ?>
-                            <div class="row">
-                                <?php foreach ($accesos as $acceso): ?>
-                                    <div class="col-md-6 mb-3">
-                                        <div class="card acceso-card">
-                                            <div class="card-body">
-                                                <div class="row">
-                                                    <div class="col-9">
-                                                        <h6 class="card-title"><?= htmlspecialchars($acceso['nombre_completo']) ?></h6>
-                                                        <p class="card-text mb-1">
-                                                            <small><strong>Cédula:</strong> <?= htmlspecialchars($acceso['cedula']) ?></small>
-                                                        </p>
-                                                        <p class="card-text mb-1">
-                                                            <small><strong>Código:</strong> <?= htmlspecialchars($acceso['codigo_universitario']) ?></small>
-                                                        </p>
-                                                        <p class="card-text mb-1">
-                                                            <small><strong>Vehículo:</strong> <?= htmlspecialchars($acceso['placa']) ?> - <?= htmlspecialchars($acceso['tipo_vehiculo']) ?></small>
-                                                        </p>
-                                                        <p class="card-text mb-1">
-                                                            <small><strong>Entrada:</strong> <?= date('H:i', strtotime($acceso['fecha_entrada'])) ?></small>
-                                                        </p>
-                                                        <p class="card-text mb-0">
-                                                            <small><strong>Parqueadero:</strong> <?= htmlspecialchars($acceso['parqueadero_nombre']) ?></small>
-                                                        </p>
-                                                    </div>
-                                                    <div class="col-3 d-flex align-items-center justify-content-end">
-                                                        <button class="btn btn-salida" 
-                                                                onclick="registrarSalida(<?= $acceso['usuario_id'] ?>, <?= $acceso['parqueadero_id'] ?>)">
-                                                            <i class="fas fa-sign-out-alt me-1"></i>Salir
-                                                        </button>
-                                                    </div>
-                                                </div>
-                                            </div>
-                                        </div>
-                                    </div>
-                                <?php endforeach; ?>
+                    
+                    <div class="row justify-content-center">
+                        <div class="col-md-8">
+                            <div class="mb-3">
+                                <label for="select-parqueadero" class="form-label"><strong>Parqueadero Actual:</strong></label>
+                                <select class="form-select form-select-lg" id="select-parqueadero">
+                                    <option value="">-- Seleccione un parqueadero --</option>
+                                    <option value="1">🏢 Parqueadero 1 - Principal</option>
+                                    <option value="2">🚗 Parqueadero 2 - Secundario</option>
+                                </select>
                             </div>
-                        <?php else: ?>
-                            <div class="text-center py-4">
-                                <i class="fas fa-car fa-3x text-muted mb-3"></i>
-                                <h5 class="text-muted">No hay vehículos en el parqueadero</h5>
-                                <p class="text-muted">Todos los vehículos han registrado su salida</p>
+                            <div class="alert alert-warning">
+                                <small>
+                                    <i class="fas fa-info-circle me-1"></i>
+                                    Escanee el código QR del usuario para registrar su salida
+                                </small>
                             </div>
-                        <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-            </div>
-        </div>
-    </div>
 
-    <!-- Modal para escanear QR de salida -->
-    <div class="modal fade" id="qrModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-warning text-dark">
-                    <h5 class="modal-title"><i class="fas fa-qrcode me-2"></i>Escanear QR para Salida</h5>
-                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                <!-- Área de Escaneo -->
+                <div id="scanner-section" class="scanner-container p-4 mb-4" style="display: none;">
+                    <div class="text-center mb-3">
+                        <h4 class="text-danger">
+                            <i class="fas fa-camera me-2"></i>Escanear QR de Salida
+                            <span id="current-parqueadero" class="badge bg-danger parqueadero-badge ms-2"></span>
+                        </h4>
+                        <p class="text-muted">Enfoca el código QR dentro del marco</p>
+                    </div>
+                    
+                    <div id="reader">
+                        <div class="text-center py-5 loading-text">
+                            <i class="fas fa-camera fa-2x mb-3"></i><br>
+                            Presiona "Iniciar Cámara" para comenzar
+                        </div>
+                    </div>
+                    
+                    <div class="text-center mt-3">
+                        <button id="btn-start" class="btn btn-success btn-lg">
+                            <i class="fas fa-play me-2"></i>Iniciar Cámara
+                        </button>
+                        <button id="btn-stop" class="btn btn-danger btn-lg" style="display: none;">
+                            <i class="fas fa-stop me-2"></i>Detener Cámara
+                        </button>
+                    </div>
                 </div>
-                <div class="modal-body text-center">
-                    <div id="reader" style="width: 100%; margin: 0 auto;"></div>
-                    <div id="result" class="mt-3"></div>
+
+                <!-- Resultado del Escaneo -->
+                <div id="result-container" class="user-card hidden p-4">
+                    <div class="text-center mb-3">
+                        <h4 class="text-success"><i class="fas fa-check-circle me-2"></i>Salida Registrada</h4>
+                        <p class="text-muted" id="result-parqueadero"></p>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Nombre:</strong>
+                                <div id="user-name" class="fw-bold text-dark"></div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Cédula:</strong>
+                                <div id="user-cedula" class="text-muted"></div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Tipo de Usuario:</strong>
+                                <span id="user-type" class="badge bg-info"></span>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="mb-3">
+                                <strong>Placa del Vehículo:</strong>
+                                <div id="vehicle-placa" class="placa-display"></div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Tipo de Vehículo:</strong>
+                                <div id="vehicle-type" class="fw-bold"></div>
+                            </div>
+                            <div class="mb-3">
+                                <strong>Hora de Salida:</strong>
+                                <div id="access-time" class="text-success fw-bold"></div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="text-center mt-4">
+                        <button id="btn-new-scan" class="btn btn-primary btn-lg">
+                            <i class="fas fa-redo me-2"></i>Nueva Salida
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Mensaje de Error -->
+                <div id="error-container" class="alert alert-danger hidden text-center">
+                    <h5><i class="fas fa-exclamation-triangle me-2"></i>Error</h5>
+                    <p id="error-message"></p>
+                    <button id="btn-retry" class="btn btn-warning">
+                        <i class="fas fa-sync me-2"></i>Reintentar
+                    </button>
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://unpkg.com/html5-qrcode@2.3.8/minified/html5-qrcode.min.js"></script>
     <script>
-        let currentUsuarioId = null;
-        let currentParqueaderoId = null;
-        let html5QrcodeScanner = null;
-
-        function registrarSalida(usuarioId, parqueaderoId) {
-            currentUsuarioId = usuarioId;
-            currentParqueaderoId = parqueaderoId;
-            
-            // Mostrar modal
-            const modal = new bootstrap.Modal(document.getElementById('qrModal'));
-            modal.show();
-            
-            // Inicializar scanner cuando el modal se muestra
-            setTimeout(initScanner, 500);
-        }
-
+        // Esperar a que la librería esté disponible
         function initScanner() {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear();
+            if (typeof Html5QrcodeScanner === 'undefined') {
+                console.error('Librería QR no cargada');
+                document.getElementById('error-message').textContent = 'Error: No se pudo cargar el lector QR. Recarga la página.';
+                document.getElementById('error-container').classList.remove('hidden');
+                return;
             }
 
-            html5QrcodeScanner = new Html5QrcodeScanner(
-                "reader", 
-                { 
-                    fps: 10, 
-                    qrbox: { width: 250, height: 250 } 
-                }
-            );
+            console.log('Librería QR cargada correctamente');
 
-            html5QrcodeScanner.render(onScanSuccess, onScanFailure);
-        }
+            // Manejar selección de parqueadero
+            const parqueaderoSelect = document.getElementById('select-parqueadero');
+            const scannerSection = document.getElementById('scanner-section');
+            const currentParqueaderoBadge = document.getElementById('current-parqueadero');
 
-        function onScanSuccess(decodedText, decodedResult) {
-            // Detener el scanner
-            html5QrcodeScanner.clear();
-            
-            // Verificar que el QR escaneado corresponde al usuario correcto
-            try {
-                const data = JSON.parse(decodedText);
+            parqueaderoSelect.addEventListener('change', function() {
+                const parqueaderoId = this.value;
+                const selectedText = this.options[this.selectedIndex].text;
                 
-                if (data.usuario_id != currentUsuarioId) {
-                    document.getElementById('result').innerHTML = `
-                        <div class="alert alert-danger">
-                            <h6>❌ Error</h6>
-                            <p>El QR escaneado no corresponde al vehículo seleccionado</p>
-                        </div>
-                    `;
-                    setTimeout(() => {
-                        initScanner();
-                        document.getElementById('result').innerHTML = '';
-                    }, 3000);
-                    return;
-                }
-
-                // Procesar la salida
-                procesarSalida(data);
-
-            } catch (error) {
-                document.getElementById('result').innerHTML = `
-                    <div class="alert alert-danger">
-                        <h6>❌ QR inválido</h6>
-                        <p>El código QR no es válido</p>
-                    </div>
-                `;
-                setTimeout(() => {
-                    initScanner();
-                    document.getElementById('result').innerHTML = '';
-                }, 3000);
-            }
-        }
-
-        function onScanFailure(error) {
-            // Error silencioso
-        }
-
-        function procesarSalida(data) {
-            const formData = new FormData();
-            formData.append('action', 'registrar_salida');
-            formData.append('usuario_id', data.usuario_id);
-            formData.append('hash', data.hash);
-            formData.append('parqueadero_id', data.parqueadero_id);
-
-            fetch('procesar_salida.php', {
-                method: 'POST',
-                body: formData
-            })
-            .then(response => response.json())
-            .then(result => {
-                if (result.success) {
-                    document.getElementById('result').innerHTML = `
-                        <div class="alert alert-success">
-                            <h6>✅ Salida registrada exitosamente</h6>
-                            <p><strong>Nombre:</strong> ${result.data.nombre_completo}</p>
-                            <p><strong>Vehículo:</strong> ${result.data.placa}</p>
-                            <p><strong>Parqueadero:</strong> ${result.data.parqueadero}</p>
-                            <p class="mb-0">${result.data.mensaje}</p>
-                        </div>
-                    `;
+                if (parqueaderoId) {
+                    scannerSection.style.display = 'block';
+                    currentParqueaderoBadge.textContent = selectedText.replace('-- Seleccione un parqueadero --', '').trim();
                     
-                    // Recargar la página después de 2 segundos
+                    // Scroll suave al scanner
                     setTimeout(() => {
-                        window.location.reload();
-                    }, 2000);
+                        scannerSection.scrollIntoView({ behavior: 'smooth' });
+                    }, 300);
                 } else {
-                    document.getElementById('result').innerHTML = `
-                        <div class="alert alert-danger">
-                            <h6>❌ Error</h6>
-                            <p>${result.message}</p>
-                        </div>
-                    `;
-                    setTimeout(() => {
-                        initScanner();
-                        document.getElementById('result').innerHTML = '';
-                    }, 3000);
+                    scannerSection.style.display = 'none';
+                    currentParqueaderoBadge.textContent = '';
                 }
-            })
-            .catch(error => {
-                document.getElementById('result').innerHTML = `
-                    <div class="alert alert-danger">
-                        <h6>❌ Error del sistema</h6>
-                        <p>No se pudo procesar la salida</p>
-                    </div>
-                `;
-                setTimeout(() => {
-                    initScanner();
-                    document.getElementById('result').innerHTML = '';
-                }, 3000);
             });
+
+            class QRScanner {
+                constructor() {
+                    this.html5QrcodeScanner = null;
+                    this.isScanning = false;
+                    this.initializeElements();
+                    this.initializeEventListeners();
+                }
+
+                initializeElements() {
+                    this.readerElement = document.getElementById('reader');
+                    this.btnStart = document.getElementById('btn-start');
+                    this.btnStop = document.getElementById('btn-stop');
+                    this.btnNewScan = document.getElementById('btn-new-scan');
+                    this.btnRetry = document.getElementById('btn-retry');
+                    this.resultContainer = document.getElementById('result-container');
+                    this.errorContainer = document.getElementById('error-container');
+                }
+
+                initializeEventListeners() {
+                    this.btnStart.addEventListener('click', () => this.startScanner());
+                    this.btnStop.addEventListener('click', () => this.stopScanner());
+                    this.btnNewScan.addEventListener('click', () => this.resetScanner());
+                    this.btnRetry.addEventListener('click', () => this.resetScanner());
+                }
+
+                async startScanner() {
+                    // Verificar que hay un parqueadero seleccionado
+                    const parqueaderoId = document.getElementById('select-parqueadero').value;
+                    if (!parqueaderoId) {
+                        this.showError('Por favor seleccione un parqueadero primero');
+                        return;
+                    }
+
+                    try {
+                        // Limpiar contenido inicial
+                        this.readerElement.innerHTML = '';
+                        
+                        this.html5QrcodeScanner = new Html5QrcodeScanner(
+                            "reader", 
+                            { 
+                                fps: 10, 
+                                qrbox: { width: 250, height: 250 },
+                                supportedScanTypes: []  // Escanear todos los tipos
+                            }, 
+                            false
+                        );
+
+                        await this.html5QrcodeScanner.render(
+                            (decodedText) => this.onScanSuccess(decodedText),
+                            (errorMessage) => this.onScanFailure(errorMessage)
+                        );
+
+                        this.isScanning = true;
+                        this.btnStart.style.display = 'none';
+                        this.btnStop.style.display = 'inline-block';
+                        this.readerElement.classList.add('scan-animation');
+
+                    } catch (error) {
+                        this.showError('Error al iniciar la cámara: ' + error.message);
+                    }
+                }
+
+                stopScanner() {
+                    if (this.html5QrcodeScanner && this.isScanning) {
+                        this.html5QrcodeScanner.clear().catch(error => {
+                            console.error("Error al detener scanner:", error);
+                        });
+                        this.isScanning = false;
+                    }
+                    
+                    this.btnStart.style.display = 'inline-block';
+                    this.btnStop.style.display = 'none';
+                    this.readerElement.classList.remove('scan-animation');
+                    
+                    // Restaurar mensaje inicial
+                    this.readerElement.innerHTML = '<div class="text-center py-5 loading-text"><i class="fas fa-camera fa-2x mb-3"></i><br>Presiona "Iniciar Cámara" para comenzar</div>';
+                }
+
+                async onScanSuccess(decodedText) {
+                    try {
+                        console.log("QR escaneado:", decodedText);
+                        
+                        // PROCESAR TU FORMATO QR: "PARQ:usuario_id:hash"
+                        const qrParts = decodedText.split(':');
+                        
+                        if (qrParts.length !== 3 || qrParts[0] !== 'PARQ') {
+                            throw new Error('Formato QR inválido');
+                        }
+                        
+                        const usuario_id = qrParts[1];
+                        const hash = qrParts[2];
+                        
+                        // Detener scanner temporalmente
+                        this.stopScanner();
+                        
+                        // Procesar la SALIDA
+                        await this.processSalida(usuario_id, hash);
+                        
+                    } catch (error) {
+                        this.showError('Código QR inválido: ' + error.message);
+                    }
+                }
+
+                onScanFailure(error) {
+                    // Errores de escaneo normales, no mostrar error
+                    console.log("Escaneo en progreso:", error);
+                }
+
+                async processSalida(usuario_id, hash) {
+                    try {
+                        const parqueaderoId = document.getElementById('select-parqueadero').value;
+                        const parqueaderoText = document.getElementById('select-parqueadero').options[document.getElementById('select-parqueadero').selectedIndex].text;
+                        
+                        if (!parqueaderoId) {
+                            this.showError('Por favor seleccione un parqueadero primero');
+                            return;
+                        }
+
+                        const formData = new FormData();
+                        formData.append('usuario_id', usuario_id);
+                        formData.append('hash', hash);
+                        formData.append('parqueadero_id', parqueaderoId);
+                        formData.append('action', 'registrar_salida');
+
+                        const response = await fetch('procesar_salida.php', {
+                            method: 'POST',
+                            body: formData
+                        });
+
+                        const result = await response.json();
+
+                        if (result.success) {
+                            // Agregar información del parqueadero al resultado
+                            result.data.parqueadero = parqueaderoText;
+                            this.showSuccess(result.data);
+                        } else {
+                            this.showError(result.message || 'Error al procesar la salida');
+                        }
+
+                    } catch (error) {
+                        this.showError('Error de conexión: ' + error.message);
+                    }
+                }
+
+                showSuccess(userData) {
+                    document.getElementById('user-name').textContent = userData.nombre_completo;
+                    document.getElementById('user-cedula').textContent = userData.cedula;
+                    document.getElementById('user-type').textContent = userData.tipo;
+                    document.getElementById('vehicle-placa').textContent = userData.placa;
+                    document.getElementById('vehicle-type').textContent = userData.tipo_vehiculo;
+                    document.getElementById('access-time').textContent = new Date().toLocaleString();
+                    document.getElementById('result-parqueadero').textContent = userData.parqueadero;
+
+                    this.resultContainer.classList.remove('hidden');
+                    this.errorContainer.classList.add('hidden');
+                }
+
+                showError(message) {
+                    document.getElementById('error-message').textContent = message;
+                    this.errorContainer.classList.remove('hidden');
+                    this.resultContainer.classList.add('hidden');
+                }
+
+                resetScanner() {
+                    this.resultContainer.classList.add('hidden');
+                    this.errorContainer.classList.add('hidden');
+                    this.stopScanner();
+                    setTimeout(() => this.startScanner(), 1000);
+                }
+            }
+
+            // Inicializar cuando el DOM esté listo
+            if (document.readyState === 'loading') {
+                document.addEventListener('DOMContentLoaded', () => {
+                    new QRScanner();
+                });
+            } else {
+                new QRScanner();
+            }
         }
 
-        // Limpiar scanner cuando se cierra el modal
-        document.getElementById('qrModal').addEventListener('hidden.bs.modal', function () {
-            if (html5QrcodeScanner) {
-                html5QrcodeScanner.clear();
-            }
-        });
+        // Inicializar cuando la librería esté lista
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', initScanner);
+        } else {
+            initScanner();
+        }
     </script>
 </body>
 </html>

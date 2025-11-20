@@ -145,10 +145,10 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
 
                             <!-- Registrar Salidas -->
                             <div class="col-md-4">
-                                <a href="../vigilante/salidas.php" class="btn btn-warning btn-action w-100 d-flex flex-column align-items-center">
+                                <a href="../vigilante/salidas.php" class="btn btn-danger btn-action w-100 d-flex flex-column align-items-center">
                                     <i class="fas fa-sign-out-alt fa-3x mb-3"></i>
                                     <span>Registrar Salidas</span>
-                                    <small class="mt-1">Gestionar salidas del parqueadero</small>
+                                    <small class="mt-1">Escanear QR para salidas</small>
                                 </a>
                             </div>
                             <!-- Registro Manual -->
