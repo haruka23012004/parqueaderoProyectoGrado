@@ -120,23 +120,46 @@ try {
     $stmt_activos->execute();
     $estadisticas['usuarios_activos'] = $stmt_activos->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    // 7. VIGILANTES MÁS ACTIVOS - CORREGIDO
-    $query_vigilantes = "SELECT 
-                          u.nombre_completo as vigilante_nombre,
-                          COUNT(*) as registros_realizados,
-                          SUM(CASE WHEN ra.tipo_movimiento = 'entrada' THEN 1 ELSE 0 END) as entradas_registradas,
-                          SUM(CASE WHEN ra.tipo_movimiento = 'salida' THEN 1 ELSE 0 END) as salidas_registradas
-                         FROM registros_acceso ra
-                         INNER JOIN usuarios_parqueadero u ON ra.empleado_id = u.id
-                         WHERE DATE(ra.fecha_hora) = ?
-                         AND ra.metodo_acceso = 'manual'
-                         GROUP BY u.id, u.nombre_completo
-                         ORDER BY registros_realizados DESC";
-    
-    $stmt_vigilantes = $conn->prepare($query_vigilantes);
-    $stmt_vigilantes->bind_param("s", $fecha_reporte);
-    $stmt_vigilantes->execute();
-    $estadisticas['vigilantes'] = $stmt_vigilantes->get_result()->fetch_all(MYSQLI_ASSOC);
+    // 7. VIGILANTES MÁS ACTIVOS - CONSULTA CORREGIDA
+        $query_vigilantes = "SELECT 
+                            u.nombre_completo as vigilante_nombre,
+                            COUNT(*) as registros_realizados,
+                            SUM(CASE WHEN ra.tipo_movimiento = 'entrada' THEN 1 ELSE 0 END) as entradas_registradas,
+                            SUM(CASE WHEN ra.tipo_movimiento = 'salida' THEN 1 ELSE 0 END) as salidas_registradas
+                            FROM registros_acceso ra
+                            INNER JOIN usuarios_parqueadero u ON ra.empleado_id = u.id
+                            WHERE DATE(ra.fecha_hora) = ?
+                            AND ra.metodo_acceso = 'manual'
+                            GROUP BY u.id, u.nombre_completo
+                            ORDER BY registros_realizados DESC";
+
+        $stmt_vigilantes = $conn->prepare($query_vigilantes);
+        $stmt_vigilantes->bind_param("s", $fecha_reporte);
+        $stmt_vigilantes->execute();
+        $estadisticas['vigilantes'] = $stmt_vigilantes->get_result()->fetch_all(MYSQLI_ASSOC);
+
+        // DEBUG: Verificar qué está pasando con los registros manuales
+$query_debug = "SELECT 
+                 ra.id, 
+                 ra.empleado_id,
+                 ra.tipo_movimiento,
+                 ra.metodo_acceso,
+                 u.nombre_completo
+                FROM registros_acceso ra
+                LEFT JOIN usuarios_parqueadero u ON ra.empleado_id = u.id
+                WHERE DATE(ra.fecha_hora) = ?
+                AND ra.metodo_acceso = 'manual'
+                ORDER BY ra.fecha_hora";
+
+$stmt_debug = $conn->prepare($query_debug);
+$stmt_debug->bind_param("s", $fecha_reporte);
+$stmt_debug->execute();
+$debug_results = $stmt_debug->get_result()->fetch_all(MYSQLI_ASSOC);
+
+error_log("DEBUG - Registros manuales encontrados: " . count($debug_results));
+foreach ($debug_results as $debug) {
+    error_log("ID: " . $debug['id'] . ", Empleado ID: " . $debug['empleado_id'] . ", Vigilante: " . $debug['nombre_completo']);
+}
 
     // 8. COMPARATIVA CON EL DÍA ANTERIOR
     $query_comparativa = "SELECT 
@@ -541,68 +564,112 @@ function obtenerNombreDia($fecha) {
         </div>
 
         <!-- QUINTA SECCIÓN: VIGILANTES Y HORAS PICO -->
-        <div class="row">
-            <!-- Vigilantes -->
-            <div class="col-md-6">
-                <h5 class="section-title">Registros Manuales por Vigilante</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Vigilante</th>
-                                <th>Registros</th>
-                                <th>Entradas</th>
-                                <th>Salidas</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($estadisticas['vigilantes'] as $vigilante): ?>
-                            <tr>
-                                <td><?= $vigilante['vigilante_nombre'] ?></td>
-                                <td class="fw-bold"><?= $vigilante['registros_realizados'] ?></td>
-                                <td class="text-success"><?= $vigilante['entradas_registradas'] ?></td>
-                                <td class="text-danger"><?= $vigilante['salidas_registradas'] ?></td>
-                            </tr>
-                            <?php endforeach; ?>
-                            <?php if (empty($estadisticas['vigilantes'])): ?>
-                            <tr>
-                                <td colspan="4" class="text-center text-muted py-2">
-                                    No hubo registros manuales este día
-                                </td>
-                            </tr>
-                            <?php endif; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-
-            <!-- Horas Pico -->
-            <div class="col-md-6">
-                <h5 class="section-title">Horas con Más Entradas</h5>
-                <div class="table-responsive">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Hora</th>
-                                <th>Entradas</th>
-                                <th>% del Día</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            <?php foreach ($estadisticas['horas_pico'] as $hora): ?>
-                            <tr>
-                                <td class="fw-bold"><?= formatearHora($hora['hora']) ?></td>
-                                <td><?= $hora['total_entradas'] ?></td>
-                                <td>
-                                    <?= round(($hora['total_entradas'] / $estadisticas['general']['total_entradas']) * 100, 1) ?>%
-                                </td>
-                            </tr>
-                            <?php endforeach; ?>
-                        </tbody>
-                    </table>
-                </div>
-            </div>
+<div class="row">
+    <!-- Vigilantes -->
+    <div class="col-md-6">
+        <h5 class="section-title">Registros Manuales por Vigilante</h5>
+        
+        <!-- Información de debug temporal -->
+        <div class="alert alert-info no-print mb-3">
+            <small>
+                <strong>Información de diagnóstico:</strong><br>
+                Registros manuales encontrados: <?= count($debug_results) ?><br>
+                Vigilantes únicos: <?= count($estadisticas['vigilantes']) ?>
+            </small>
         </div>
+
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Vigilante</th>
+                        <th>Total Registros</th>
+                        <th>Entradas</th>
+                        <th>Salidas</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($estadisticas['vigilantes'] as $vigilante): ?>
+                    <tr>
+                        <td><?= htmlspecialchars($vigilante['vigilante_nombre']) ?></td>
+                        <td class="fw-bold"><?= $vigilante['registros_realizados'] ?></td>
+                        <td class="text-success"><?= $vigilante['entradas_registradas'] ?></td>
+                        <td class="text-danger"><?= $vigilante['salidas_registradas'] ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                    
+                    <?php if (empty($estadisticas['vigilantes'])): ?>
+                    <tr>
+                        <td colspan="4" class="text-center text-muted py-2">
+                            No se encontraron registros manuales asignados a vigilantes
+                            <?php if (count($debug_results) > 0): ?>
+                                <br><small class="text-warning">
+                                    Pero hay <?= count($debug_results) ?> registros manuales en la base de datos.
+                                    ¿Problema con la relación de empleado_id?
+                                </small>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Tabla de debug temporal -->
+        <?php if (!empty($debug_results) && empty($estadisticas['vigilantes'])): ?>
+        <div class="alert alert-warning no-print mt-3">
+            <h6>Registros manuales encontrados (debug):</h6>
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>ID Registro</th>
+                        <th>Empleado ID</th>
+                        <th>Movimiento</th>
+                        <th>Vigilante</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($debug_results as $debug): ?>
+                    <tr>
+                        <td><?= $debug['id'] ?></td>
+                        <td><?= $debug['empleado_id'] ?></td>
+                        <td><?= $debug['tipo_movimiento'] ?></td>
+                        <td><?= $debug['nombre_completo'] ?: '<span class="text-danger">NO ENCONTRADO</span>' ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Horas Pico -->
+    <div class="col-md-6">
+        <h5 class="section-title">Horas con Más Entradas</h5>
+        <div class="table-responsive">
+            <table class="table table-bordered">
+                <thead>
+                    <tr>
+                        <th>Hora</th>
+                        <th>Entradas</th>
+                        <th>% del Día</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($estadisticas['horas_pico'] as $hora): ?>
+                    <tr>
+                        <td class="fw-bold"><?= formatearHora($hora['hora']) ?></td>
+                        <td><?= $hora['total_entradas'] ?></td>
+                        <td>
+                            <?= round(($hora['total_entradas'] / $estadisticas['general']['total_entradas']) * 100, 1) ?>%
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
         <!-- SEXTA SECCIÓN: VEHÍCULOS FRECUENTES -->
         <div class="print-break"></div>
