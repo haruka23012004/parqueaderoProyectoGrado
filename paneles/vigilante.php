@@ -3,8 +3,6 @@
 require '../includes/auth.php';
 require '../includes/conexion.php';
 
-// Configurar zona horaria de Colombia
-date_default_timezone_set('America/Bogota');
 
 // Verificar que sea vigilante
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
