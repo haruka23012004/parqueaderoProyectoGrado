@@ -227,7 +227,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                         </li>
                         <li class="nav-item">
                             <a href="#" class="nav-link">
-                                <i class="bi bi-gear"></i> Configuración
+                                <i class="bi bi-gear"></i> Restablecimiento de contraseñas
                             </a>
                         </li>
                     </ul>
