@@ -237,19 +237,25 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
             <!-- Main Content -->
             <div class="col-lg-10 col-xl-10 main-content">
                 <!-- Navbar superior -->
-                <nav class="navbar navbar-expand-lg navbar-light bg-light">
-                    <div class="container-fluid">
-                        <button class="navbar-toggler mobile-menu-btn" type="button">
-                            <span class="navbar-toggler-icon"></span>
-                        </button>
-                        <span class="navbar-brand">Panel de Administración</span>
-                        <div class="d-flex">
-                            <a href="../acceso/logout.php" class="btn btn-outline-danger">
-                                <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
-                            </a>
-                        </div>
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <button class="navbar-toggler mobile-menu-btn" type="button">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <span class="navbar-brand">Panel de Administración</span>
+                    <div class="d-flex align-items-center">
+                        <!-- Botón Cambiar Contraseña -->
+                        <a href="cambiar_password.php" class="btn btn-outline-primary me-2">
+                            <i class="bi bi-key"></i> <span class="d-none d-sm-inline">Cambiar Contraseña</span>
+                        </a>
+                        
+                        <!-- Botón Cerrar Sesión -->
+                        <a href="../acceso/logout.php" class="btn btn-outline-danger">
+                            <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
+                        </a>
                     </div>
-                </nav>
+                </div>
+            </nav>
 
                 <div class="container-fluid p-3 p-md-4">
                     <div class="row mb-4">
