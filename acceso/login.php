@@ -82,7 +82,7 @@ document.addEventListener("DOMContentLoaded", function() {
             </div>
 
             <div class="text-center mt-3">
-                <a href="recuperar_contrasena.php">¿Olvidaste tu contraseña?</a>
+                <a href="olvido_password.php">¿Olvidaste tu contraseña?</a>
             </div>
 
             <div class="text-center mt-3">
