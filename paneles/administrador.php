@@ -235,167 +235,35 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
             </div>
 
             <!-- Main Content -->
-<div class="col-lg-10 col-xl-10 main-content">
-    <!-- Navbar superior -->
-    <nav class="navbar navbar-expand-lg admin-top-nav">
-        <div class="container-fluid">
-            <button class="navbar-toggler mobile-menu-btn" type="button">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <span class="navbar-brand">
-                <i class="fas fa-tachometer-alt me-2"></i>
-                Panel de Administración
-            </span>
-            <div class="d-flex align-items-center admin-nav-buttons">
-                <!-- Botón Reportes Carnet Perdido -->
-                <a href="../admin/reportes_carnet_perdido.php" class="btn btn-report-card me-2">
-                    <i class="fas fa-id-card me-1"></i>
-                    <span class="d-none d-sm-inline">Reportes Carnet Perdido</span>
-                </a>
-                
-                <!-- Botón Cambiar Contraseña -->
-                <a href="cambiar_password.php" class="btn btn-change-password me-2">
-                    <i class="fas fa-key me-1"></i>
-                    <span class="d-none d-sm-inline">Cambiar Contraseña</span>
-                </a>
-                
-                <!-- Botón Cerrar Sesión -->
-                <a href="../acceso/logout.php" class="btn btn-logout-admin">
-                    <i class="fas fa-sign-out-alt me-1"></i>
-                    <span class="d-none d-sm-inline">Cerrar Sesión</span>
-                </a>
-            </div>
-        </div>
-    </nav>
+            <div class="col-lg-10 col-xl-10 main-content">
+                <!-- Navbar superior -->
+            <nav class="navbar navbar-expand-lg navbar-light bg-light">
+                <div class="container-fluid">
+                    <button class="navbar-toggler mobile-menu-btn" type="button">
+                        <span class="navbar-toggler-icon"></span>
+                    </button>
+                    <span class="navbar-brand">Panel de Administración</span>
+                    <div class="d-flex align-items-center">
 
-    <style>
-        .admin-top-nav {
-            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
-            box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
-            padding: 12px 20px;
-            border-bottom: 3px solid #FF6B35;
-        }
-        
-        .admin-top-nav .navbar-brand {
-            color: #ffffff;
-            font-weight: 700;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-        }
-        
-        .admin-top-nav .navbar-brand i {
-            color: #FF6B35;
-        }
-        
-        .admin-nav-buttons {
-            gap: 8px;
-        }
-        
-        .btn-report-card {
-            background: linear-gradient(135deg, #FF6B35, #FF8C42);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 3px 8px rgba(255, 107, 53, 0.3);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
-        
-        .btn-report-card:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(255, 107, 53, 0.4);
-            color: white;
-        }
-        
-        .btn-change-password {
-            background: linear-gradient(135deg, #3498db, #2980b9);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 3px 8px rgba(52, 152, 219, 0.3);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
-        
-        .btn-change-password:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(52, 152, 219, 0.4);
-            color: white;
-        }
-        
-        .btn-logout-admin {
-            background: linear-gradient(135deg, #e74c3c, #c0392b);
-            border: none;
-            color: white;
-            font-weight: 600;
-            padding: 10px 20px;
-            border-radius: 8px;
-            box-shadow: 0 3px 8px rgba(231, 76, 60, 0.3);
-            transition: all 0.3s ease;
-            display: flex;
-            align-items: center;
-            text-decoration: none;
-        }
-        
-        .btn-logout-admin:hover {
-            transform: translateY(-2px);
-            box-shadow: 0 5px 15px rgba(231, 76, 60, 0.4);
-            color: white;
-        }
-        
-        /* Responsive */
-        @media (max-width: 768px) {
-            .admin-top-nav {
-                padding: 10px 15px;
-            }
-            
-            .admin-top-nav .navbar-brand {
-                font-size: 1.1rem;
-            }
-            
-            .btn-report-card,
-            .btn-change-password,
-            .btn-logout-admin {
-                padding: 8px 15px;
-                font-size: 0.9rem;
-            }
-            
-            .btn-report-card .d-none,
-            .btn-change-password .d-none,
-            .btn-logout-admin .d-none {
-                display: none !important;
-            }
-        }
-        
-        @media (max-width: 576px) {
-            .admin-nav-buttons {
-                gap: 6px;
-            }
-            
-            .btn-report-card,
-            .btn-change-password,
-            .btn-logout-admin {
-                padding: 6px 12px;
-                font-size: 0.8rem;
-            }
-            
-            .btn-report-card .me-1,
-            .btn-change-password .me-1,
-            .btn-logout-admin .me-1 {
-                margin-right: 4px !important;
-            }
-        }
-    </style>
-</div>
+                    <li class="nav-item">
+                        <a class="btn btn-warning text-white fw-bold px-3 py-2 rounded-3 shadow-sm" href="../admin/reportes_carnet_perdido.php">
+                            <i class="fas fa-id-card me-2"></i> 
+                            Reportes Carnet Perdido
+                            <span class="badge bg-danger ms-2">3</span>
+                        </a>
+                    </li>
+                        <!-- Botón Cambiar Contraseña -->
+                        <a href="cambiar_password.php" class="btn btn-outline-primary me-2">
+                            <i class="bi bi-key"></i> <span class="d-none d-sm-inline">Cambiar Contraseña</span>
+                        </a>
+                        
+                        <!-- Botón Cerrar Sesión -->
+                        <a href="../acceso/logout.php" class="btn btn-outline-danger">
+                            <i class="bi bi-box-arrow-right"></i> <span class="d-none d-sm-inline">Cerrar Sesión</span>
+                        </a>
+                    </div>
+                </div>
+            </nav>
 
                 <div class="container-fluid p-3 p-md-4">
                     <div class="row mb-4">
