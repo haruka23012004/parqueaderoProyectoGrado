@@ -17,7 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subcategoria = $_POST['subcategoria'] ?? '';
     $descripcion = trim($_POST['descripcion'] ?? '');
     $urgencia = $_POST['urgencia'] ?? 'media';
-    $usuario_id = $_SESSION['usuario_id'];
+    $id = $_SESSION['id'];
     
     try {
         // Validar campos obligatorios
@@ -27,11 +27,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Insertar en la base de datos
         $query = "INSERT INTO pedidos_ayuda 
-                  (usuario_id, tipo_problema, subcategoria, descripcion, urgencia, estado, fecha_creacion) 
+                  (id, tipo_problema, subcategoria, descripcion, urgencia, estado, fecha_creacion) 
                   VALUES (?, ?, ?, ?, ?, 'pendiente', NOW())";
         
         $stmt = $conn->prepare($query);
-        $stmt->bind_param("issss", $usuario_id, $tipo_problema, $subcategoria, $descripcion, $urgencia);
+        $stmt->bind_param("issss", $id, $tipo_problema, $subcategoria, $descripcion, $urgencia);
         
         if ($stmt->execute()) {
             $mensaje = '✅ Tu solicitud de ayuda ha sido enviada correctamente. Te contactaremos pronto.';
@@ -51,11 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Obtener solicitudes anteriores del usuario
 $query_solicitudes = "SELECT * FROM pedidos_ayuda 
-                      WHERE usuario_id = ? 
+                      WHERE id = ? 
                       ORDER BY fecha_creacion DESC 
                       LIMIT 5";
 $stmt_solicitudes = $conn->prepare($query_solicitudes);
-$stmt_solicitudes->bind_param("i", $_SESSION['usuario_id']);
+$stmt_solicitudes->bind_param("i", $_SESSION['id']);
 $stmt_solicitudes->execute();
 $solicitudes_anteriores = $stmt_solicitudes->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>

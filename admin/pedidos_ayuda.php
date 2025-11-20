@@ -35,7 +35,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['responder'])) {
 // Obtener todos los pedidos de ayuda
 $query_pedidos = "SELECT pa.*, u.nombre_completo, u.cedula 
                   FROM pedidos_ayuda pa
-                  INNER JOIN usuarios_parqueadero u ON pa.usuario_id = u.id
+                  INNER JOIN usuarios_parqueadero u ON pa.id = u.id
                   ORDER BY 
                     CASE pa.urgencia 
                         WHEN 'alta' THEN 1
