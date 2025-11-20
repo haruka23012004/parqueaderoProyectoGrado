@@ -22,9 +22,9 @@ if (empty($email)) {
 
 // Validar dominios de email permitidos
 $dominiosPermitidos = ['gmail.com', 'uniguajira.edu.co'];
-$dominio = strtolower(substr(strrchr($email, "@"), 1));
+$dominio_usuario = strtolower(substr(strrchr($email, "@"), 1));
 
-if (!in_array($dominio, $dominiosPermitidos)) {
+if (!in_array($dominio_usuario, $dominiosPermitidos)) {
     setMensaje('danger', 'Solo se permiten correos de @gmail.com y @uniguajira.edu.co');
     header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
     exit();
@@ -60,7 +60,7 @@ try {
         throw new Exception('Error al guardar el token de recuperación');
     }
 
-    // Configurar PHPMailer para Hostinger (sin configuración adicional)
+    // Configurar PHPMailer
     require_once __DIR__ . '/../PHPMailer-master/src/PHPMailer.php';
     require_once __DIR__ . '/../PHPMailer-master/src/SMTP.php';
     require_once __DIR__ . '/../PHPMailer-master/src/Exception.php';
@@ -68,24 +68,24 @@ try {
     $mail = new PHPMailer\PHPMailer\PHPMailer(true);
 
     try {
-        // Configuración automática para Hostinger
+        // CONFIGURACIÓN UNIVERSAL PARA HOSTINGER - SIN CREDENCIALES PERSONALES
         $mail->isSMTP();
         $mail->Host = 'localhost';
         $mail->SMTPAuth = false;
         $mail->Port = 25;
         
-        // Email FROM automático basado en el dominio
-        $dominio = $_SERVER['HTTP_HOST'];
-        $mail->setFrom('sistema@' . $dominio, 'Sistema de Parqueadero');
+        // Email FROM automático - NO requiere configuración manual
+        $dominio_servidor = $_SERVER['HTTP_HOST'];
+        $mail->setFrom('sistema@' . $dominio_servidor, 'Sistema de Parqueadero - Uniguajira');
 
-        // Destinatarios
+        // Destinatarios - ENVÍA A CUALQUIER EMAIL VÁLIDO (@gmail.com o @uniguajira.edu.co)
         $mail->addAddress($email, $empleado['nombre_completo']);
 
-        // Contenido
+        // Contenido del email
         $mail->isHTML(true);
-        $mail->Subject = 'Recuperación de Contraseña - Sistema Parqueadero';
+        $mail->Subject = 'Recuperación de Contraseña - Sistema Parqueadero Uniguajira';
         
-        $resetLink = "https://" . $dominio . BASE_URL . "/acceso/reset_password.php?token=" . $token;
+        $resetLink = "https://" . $dominio_servidor . BASE_URL . "/acceso/reset_password.php?token=" . $token;
         
         $mail->Body = "
             <div style='font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;'>
@@ -136,9 +136,9 @@ try {
         // Si falla el email, mostrar mensaje alternativo
         error_log("Error al enviar email: " . $mail->ErrorInfo);
         
-        // Opción alternativa: mostrar el token directamente (solo para desarrollo)
+        // En desarrollo: mostrar enlace directo
         if ($_SERVER['HTTP_HOST'] === 'localhost' || strpos($_SERVER['HTTP_HOST'], '127.0.0.1') !== false) {
-            setMensaje('info', "En desarrollo: Token de recuperación - <a href='reset_password.php?token=$token'>Haz clic aquí</a>");
+            setMensaje('info', "EN MODO DESARROLLO: <a href='reset_password.php?token=$token' style='color: #007bff;'>Haz clic aquí para restablecer contraseña</a>");
             header('Location: ' . BASE_URL . '/acceso/olvido_password.php');
         } else {
             setMensaje('warning', 'El sistema de email no está disponible temporalmente. Por favor, contacta al administrador.');
