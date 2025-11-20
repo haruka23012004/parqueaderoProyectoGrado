@@ -45,6 +45,12 @@ $where_conditions = [];
 $params = [];
 $types = '';
 
+// Consulta base
+$query = "SELECT r.*, e.nombre_completo as admin_nombre 
+          FROM reportes_carnet_perdido r 
+          LEFT JOIN empleados e ON r.administrador_id = e.id";
+
+// Aplicar filtros
 if (!empty($busqueda)) {
     $where_conditions[] = "(r.nombre_completo LIKE ? OR r.cedula LIKE ? OR r.contacto LIKE ? OR r.descripcion LIKE ?)";
     $params = array_merge($params, ["%$busqueda%", "%$busqueda%", "%$busqueda%", "%$busqueda%"]);
@@ -75,56 +81,50 @@ if (!empty($fecha_hasta)) {
     $types .= 's';
 }
 
-// Construir ORDER BY
-$order_by = '';
-switch ($orden) {
-    case 'nombre_asc':
-        $order_by = 'r.nombre_completo ASC';
-        break;
-    case 'nombre_desc':
-        $order_by = 'r.nombre_completo DESC';
-        break;
-    case 'fecha_asc':
-        $order_by = 'r.fecha_reporte ASC';
-        break;
-    case 'fecha_reporte_desc':
-    default:
-        $order_by = 'r.fecha_reporte DESC';
-        break;
-}
-
-// Consulta base
-$query = "SELECT r.*, e.nombre_completo as admin_nombre 
-          FROM reportes_carnet_perdido r 
-          LEFT JOIN empleados e ON r.administrador_id = e.id";
-
-// Agregar condiciones WHERE
+// Agregar condiciones WHERE si existen
 if (!empty($where_conditions)) {
     $query .= " WHERE " . implode(" AND ", $where_conditions);
 }
 
-// Agregar ORDER BY
-$query .= " ORDER BY $order_by";
+// Construir ORDER BY
+switch ($orden) {
+    case 'nombre_asc':
+        $query .= " ORDER BY r.nombre_completo ASC";
+        break;
+    case 'nombre_desc':
+        $query .= " ORDER BY r.nombre_completo DESC";
+        break;
+    case 'fecha_asc':
+        $query .= " ORDER BY r.fecha_reporte ASC";
+        break;
+    case 'fecha_reporte_desc':
+    default:
+        $query .= " ORDER BY r.fecha_reporte DESC";
+        break;
+}
 
 // Preparar y ejecutar consulta
-$stmt = $conn->prepare($query);
 if (!empty($params)) {
+    $stmt = $conn->prepare($query);
     $stmt->bind_param($types, ...$params);
+    $stmt->execute();
+    $resultado = $stmt->get_result();
+} else {
+    $resultado = $conn->query($query);
 }
-$stmt->execute();
-$resultado = $stmt->get_result();
 
 // Contadores para estadísticas
 $total_reportes = $resultado->num_rows;
+
+// Obtener contadores reales de todos los reportes
+$query_contadores = "SELECT estado, COUNT(*) as total FROM reportes_carnet_perdido GROUP BY estado";
+$result_contadores = $conn->query($query_contadores);
 $contadores_estado = [
     'pendiente' => 0,
     'en_proceso' => 0,
     'resuelto' => 0
 ];
 
-// Obtener contadores reales
-$query_contadores = "SELECT estado, COUNT(*) as total FROM reportes_carnet_perdido GROUP BY estado";
-$result_contadores = $conn->query($query_contadores);
 while ($row = $result_contadores->fetch_assoc()) {
     $contadores_estado[$row['estado']] = $row['total'];
 }
@@ -171,16 +171,6 @@ while ($row = $result_contadores->fetch_assoc()) {
             color: white;
         }
         
-        .stats-card {
-            border: none;
-            border-radius: 10px;
-            transition: all 0.3s ease;
-        }
-        
-        .stats-card:hover {
-            transform: translateY(-3px);
-        }
-        
         .filter-badge {
             cursor: pointer;
             transition: all 0.3s ease;
@@ -215,6 +205,13 @@ while ($row = $result_contadores->fetch_assoc()) {
             padding: 15px;
             margin-top: 15px;
         }
+        
+        .active-filters {
+            background: #e9ecef;
+            border-radius: 8px;
+            padding: 10px;
+            margin-bottom: 15px;
+        }
     </style>
 </head>
 <body>
@@ -245,106 +242,121 @@ while ($row = $result_contadores->fetch_assoc()) {
             <div class="alert alert-danger"><?php echo $_SESSION['error']; unset($_SESSION['error']); ?></div>
         <?php endif; ?>
 
-        <!-- Sección de Búsqueda Avanzada -->
-        <div class="search-section">
-            <div class="row align-items-center">
-                <div class="col-md-8">
-                    <form method="GET" class="d-flex gap-2">
-                        <div class="flex-grow-1">
-                            <input type="text" 
-                                   name="busqueda" 
-                                   class="form-control search-input" 
-                                   placeholder="Buscar por nombre, cédula, contacto o descripción..."
-                                   value="<?php echo htmlspecialchars($busqueda); ?>">
+        <!-- Formulario Principal de Búsqueda -->
+        <form method="GET" id="mainSearchForm">
+            <!-- Sección de Búsqueda Avanzada -->
+            <div class="search-section">
+                <div class="row align-items-center">
+                    <div class="col-md-8">
+                        <div class="d-flex gap-2">
+                            <div class="flex-grow-1">
+                                <input type="text" 
+                                       name="busqueda" 
+                                       class="form-control search-input" 
+                                       placeholder="Buscar por nombre, cédula, contacto o descripción..."
+                                       value="<?php echo htmlspecialchars($busqueda); ?>">
+                            </div>
+                            <button type="submit" class="btn btn-light">
+                                <i class="fas fa-search"></i>
+                            </button>
                         </div>
-                        <button type="submit" class="btn btn-light">
-                            <i class="fas fa-search"></i>
+                    </div>
+                    <div class="col-md-4 text-end">
+                        <button type="button" class="btn btn-export me-2" onclick="exportarReportes()">
+                            <i class="fas fa-download me-1"></i> Exportar
                         </button>
-                    </form>
+                        <a href="reportes_carnet_perdido.php" class="btn btn-clear">
+                            <i class="fas fa-times me-1"></i> Limpiar
+                        </a>
+                    </div>
                 </div>
-                <div class="col-md-4 text-end">
-                    <button class="btn btn-export me-2" onclick="exportarReportes()">
-                        <i class="fas fa-download me-1"></i> Exportar
-                    </button>
-                    <a href="reportes_carnet_perdido.php" class="btn btn-clear">
-                        <i class="fas fa-times me-1"></i> Limpiar
-                    </a>
-                </div>
-            </div>
 
-            <!-- Filtros Avanzados -->
-            <div class="filter-section mt-3">
-                <div class="row g-3">
-                    <div class="col-md-3">
-                        <label class="form-label text-dark"><strong>Estado</strong></label>
-                        <select name="estado" class="form-select" onchange="this.form.submit()" form="filtrosForm">
-                            <option value="">Todos los estados</option>
-                            <option value="pendiente" <?php echo $estado == 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
-                            <option value="en_proceso" <?php echo $estado == 'en_proceso' ? 'selected' : ''; ?>>En Proceso</option>
-                            <option value="resuelto" <?php echo $estado == 'resuelto' ? 'selected' : ''; ?>>Resuelto</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <label class="form-label text-dark"><strong>Tipo de Contacto</strong></label>
-                        <select name="tipo_contacto" class="form-select" onchange="this.form.submit()" form="filtrosForm">
-                            <option value="">Todos los tipos</option>
-                            <option value="telefono" <?php echo $tipo_contacto == 'telefono' ? 'selected' : ''; ?>>Teléfono</option>
-                            <option value="correo" <?php echo $tipo_contacto == 'correo' ? 'selected' : ''; ?>>Correo</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <label class="form-label text-dark"><strong>Fecha Desde</strong></label>
-                        <input type="date" name="fecha_desde" class="form-control" value="<?php echo $fecha_desde; ?>" form="filtrosForm">
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <label class="form-label text-dark"><strong>Fecha Hasta</strong></label>
-                        <input type="date" name="fecha_hasta" class="form-control" value="<?php echo $fecha_hasta; ?>" form="filtrosForm">
-                    </div>
-                    
-                    <div class="col-md-3">
-                        <label class="form-label text-dark"><strong>Ordenar por</strong></label>
-                        <select name="orden" class="form-select" onchange="this.form.submit()" form="filtrosForm">
-                            <option value="fecha_reporte_desc" <?php echo $orden == 'fecha_reporte_desc' ? 'selected' : ''; ?>>Fecha (más reciente)</option>
-                            <option value="fecha_asc" <?php echo $orden == 'fecha_asc' ? 'selected' : ''; ?>>Fecha (más antigua)</option>
-                            <option value="nombre_asc" <?php echo $orden == 'nombre_asc' ? 'selected' : ''; ?>>Nombre (A-Z)</option>
-                            <option value="nombre_desc" <?php echo $orden == 'nombre_desc' ? 'selected' : ''; ?>>Nombre (Z-A)</option>
-                        </select>
-                    </div>
-                    
-                    <div class="col-md-9 d-flex align-items-end">
-                        <button type="submit" class="btn btn-primary me-2" form="filtrosForm">
-                            <i class="fas fa-filter me-1"></i> Aplicar Filtros
-                        </button>
+                <!-- Filtros Avanzados -->
+                <div class="filter-section mt-3">
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <label class="form-label text-dark"><strong>Estado</strong></label>
+                            <select name="estado" class="form-select">
+                                <option value="">Todos los estados</option>
+                                <option value="pendiente" <?php echo $estado == 'pendiente' ? 'selected' : ''; ?>>Pendiente</option>
+                                <option value="en_proceso" <?php echo $estado == 'en_proceso' ? 'selected' : ''; ?>>En Proceso</option>
+                                <option value="resuelto" <?php echo $estado == 'resuelto' ? 'selected' : ''; ?>>Resuelto</option>
+                            </select>
+                        </div>
                         
-                        <!-- Filtros rápidos -->
-                        <div class="btn-group">
-                            <span class="badge bg-danger filter-badge me-2" onclick="aplicarFiltroRapido('pendiente')">
-                                Pendientes: <?php echo $contadores_estado['pendiente']; ?>
-                            </span>
-                            <span class="badge bg-warning filter-badge me-2" onclick="aplicarFiltroRapido('en_proceso')">
-                                En Proceso: <?php echo $contadores_estado['en_proceso']; ?>
-                            </span>
-                            <span class="badge bg-success filter-badge" onclick="aplicarFiltroRapido('resuelto')">
-                                Resueltos: <?php echo $contadores_estado['resuelto']; ?>
-                            </span>
+                        <div class="col-md-3">
+                            <label class="form-label text-dark"><strong>Tipo de Contacto</strong></label>
+                            <select name="tipo_contacto" class="form-select">
+                                <option value="">Todos los tipos</option>
+                                <option value="telefono" <?php echo $tipo_contacto == 'telefono' ? 'selected' : ''; ?>>Teléfono</option>
+                                <option value="correo" <?php echo $tipo_contacto == 'correo' ? 'selected' : ''; ?>>Correo</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-dark"><strong>Fecha Desde</strong></label>
+                            <input type="date" name="fecha_desde" class="form-control" value="<?php echo $fecha_desde; ?>">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-dark"><strong>Fecha Hasta</strong></label>
+                            <input type="date" name="fecha_hasta" class="form-control" value="<?php echo $fecha_hasta; ?>">
+                        </div>
+                        
+                        <div class="col-md-2">
+                            <label class="form-label text-dark"><strong>Ordenar por</strong></label>
+                            <select name="orden" class="form-select">
+                                <option value="fecha_reporte_desc" <?php echo $orden == 'fecha_reporte_desc' ? 'selected' : ''; ?>>Fecha (más reciente)</option>
+                                <option value="fecha_asc" <?php echo $orden == 'fecha_asc' ? 'selected' : ''; ?>>Fecha (más antigua)</option>
+                                <option value="nombre_asc" <?php echo $orden == 'nombre_asc' ? 'selected' : ''; ?>>Nombre (A-Z)</option>
+                                <option value="nombre_desc" <?php echo $orden == 'nombre_desc' ? 'selected' : ''; ?>>Nombre (Z-A)</option>
+                            </select>
+                        </div>
+                        
+                        <div class="col-md-12 d-flex align-items-end justify-content-between">
+                            <button type="submit" class="btn btn-primary me-2">
+                                <i class="fas fa-filter me-1"></i> Aplicar Filtros
+                            </button>
+                            
+                            <!-- Filtros rápidos -->
+                            <div class="btn-group">
+                                <span class="badge bg-danger filter-badge me-2" onclick="setFilter('estado', 'pendiente')">
+                                    Pendientes: <?php echo $contadores_estado['pendiente']; ?>
+                                </span>
+                                <span class="badge bg-warning filter-badge me-2" onclick="setFilter('estado', 'en_proceso')">
+                                    En Proceso: <?php echo $contadores_estado['en_proceso']; ?>
+                                </span>
+                                <span class="badge bg-success filter-badge" onclick="setFilter('estado', 'resuelto')">
+                                    Resueltos: <?php echo $contadores_estado['resuelto']; ?>
+                                </span>
+                            </div>
                         </div>
                     </div>
                 </div>
             </div>
-        </div>
-
-        <!-- Formulario oculto para filtros -->
-        <form method="GET" id="filtrosForm" style="display: none;">
-            <input type="hidden" name="busqueda" value="<?php echo htmlspecialchars($busqueda); ?>">
-            <input type="hidden" name="estado" value="<?php echo htmlspecialchars($estado); ?>">
-            <input type="hidden" name="tipo_contacto" value="<?php echo htmlspecialchars($tipo_contacto); ?>">
-            <input type="hidden" name="fecha_desde" value="<?php echo htmlspecialchars($fecha_desde); ?>">
-            <input type="hidden" name="fecha_hasta" value="<?php echo htmlspecialchars($fecha_hasta); ?>">
-            <input type="hidden" name="orden" value="<?php echo htmlspecialchars($orden); ?>">
         </form>
+
+        <!-- Filtros activos -->
+        <?php if ($busqueda || $estado || $tipo_contacto || $fecha_desde || $fecha_hasta): ?>
+        <div class="active-filters">
+            <strong>Filtros activos:</strong>
+            <?php if ($busqueda): ?>
+                <span class="badge bg-info me-1">Búsqueda: <?php echo htmlspecialchars($busqueda); ?></span>
+            <?php endif; ?>
+            <?php if ($estado): ?>
+                <span class="badge bg-primary me-1">Estado: <?php echo ucfirst($estado); ?></span>
+            <?php endif; ?>
+            <?php if ($tipo_contacto): ?>
+                <span class="badge bg-secondary me-1">Contacto: <?php echo ucfirst($tipo_contacto); ?></span>
+            <?php endif; ?>
+            <?php if ($fecha_desde): ?>
+                <span class="badge bg-warning me-1">Desde: <?php echo $fecha_desde; ?></span>
+            <?php endif; ?>
+            <?php if ($fecha_hasta): ?>
+                <span class="badge bg-warning me-1">Hasta: <?php echo $fecha_hasta; ?></span>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
 
         <!-- Resultados -->
         <div class="row">
@@ -446,30 +458,21 @@ while ($row = $result_contadores->fetch_assoc()) {
             });
         });
 
-        // Aplicar filtro rápido
-        function aplicarFiltroRapido(estado) {
-            document.querySelector('select[name="estado"]').value = estado;
-            document.getElementById('filtrosForm').submit();
+        // Función para establecer filtros rápidos
+        function setFilter(field, value) {
+            document.querySelector(`[name="${field}"]`).value = value;
+            document.getElementById('mainSearchForm').submit();
         }
 
         // Exportar reportes (función de ejemplo)
         function exportarReportes() {
-            const params = new URLSearchParams({
-                busqueda: '<?php echo $busqueda; ?>',
-                estado: '<?php echo $estado; ?>',
-                tipo_contacto: '<?php echo $tipo_contacto; ?>',
-                fecha_desde: '<?php echo $fecha_desde; ?>',
-                fecha_hasta: '<?php echo $fecha_hasta; ?>',
-                exportar: 'excel'
-            });
-            
-            window.location.href = 'exportar_reportes.php?' + params.toString();
+            alert('Función de exportación - Puedes implementar la descarga de Excel aquí');
         }
 
-        // Aplicar filtros al cambiar fechas
-        document.querySelectorAll('input[type="date"]').forEach(input => {
-            input.addEventListener('change', function() {
-                document.getElementById('filtrosForm').submit();
+        // Auto-submit al cambiar algunos filtros
+        document.querySelectorAll('select[name="orden"]').forEach(select => {
+            select.addEventListener('change', function() {
+                document.getElementById('mainSearchForm').submit();
             });
         });
     </script>
