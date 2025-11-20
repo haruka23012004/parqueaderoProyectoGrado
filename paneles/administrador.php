@@ -249,7 +249,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                         <a class="btn btn-warning text-white fw-bold px-3 py-2 rounded-3 shadow-sm" href="../admin/reportes_carnet_perdido.php">
                             <i class="fas fa-id-card me-2"></i> 
                             Reportes Carnet Perdido
-                            <span class="badge bg-danger ms-2">3</span>
+                            <span class="badge bg-danger ms-2">📇</span>
                         </a>
                     </li>
                         <!-- Botón Cambiar Contraseña -->
