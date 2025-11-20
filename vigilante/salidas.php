@@ -2,8 +2,7 @@
 require '../includes/auth.php';
 require '../includes/conexion.php';
 
-// Verificar que sea vigilante
-if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
+if (!estaAutenticado() || ($_SESSION['rol_nombre'] != 'vigilante' && $_SESSION['rol_nombre'] != 'administrador_principal')) {
     header('Location: /parqueaderoProyectoGrado/paneles/administrador.php');
     exit();
 }

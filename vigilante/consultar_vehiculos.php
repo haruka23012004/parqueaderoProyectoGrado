@@ -2,8 +2,8 @@
 require_once '../includes/auth.php';
 require_once '../includes/conexion.php';
 
-// Verificar que sea vigilante
-if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
+// Verificar que sea vigilante O administrador
+if (!estaAutenticado() || ($_SESSION['rol_nombre'] != 'vigilante' && $_SESSION['rol_nombre'] != 'administrador_principal')) {
     header('Location: /parqueaderoProyectoGrado/acceso/login.php');
     exit();
 }

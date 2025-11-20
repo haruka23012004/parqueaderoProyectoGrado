@@ -2,8 +2,7 @@
 require_once '../includes/auth.php';
 require_once '../includes/conexion.php';
 
-// Verificar que sea vigilante
-if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
+if (!estaAutenticado() || ($_SESSION['rol_nombre'] != 'vigilante' && $_SESSION['rol_nombre'] != 'administrador_principal')) {
     header('Location: ../acceso/login.php');
     exit();
 }

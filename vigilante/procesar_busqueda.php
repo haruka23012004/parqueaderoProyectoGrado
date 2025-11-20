@@ -4,8 +4,8 @@ require_once '../includes/conexion.php';
 
 header('Content-Type: application/json');
 
-// Verificar autenticación y rol
-if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
+// Verificar autenticación y rol - Permitir vigilante Y administrador
+if (!estaAutenticado() || ($_SESSION['rol_nombre'] != 'vigilante' && $_SESSION['rol_nombre'] != 'administrador_principal')) {
     echo json_encode(['success' => false, 'message' => 'No autorizado']);
     exit();
 }
