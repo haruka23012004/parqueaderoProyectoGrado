@@ -17,9 +17,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $subcategoria = $_POST['subcategoria'] ?? '';
     $descripcion = trim($_POST['descripcion'] ?? '');
     $urgencia = $_POST['urgencia'] ?? 'media';
-    $id = $_SESSION['id'];
+    $empleado_id = $_SESSION['usuario_id']; // ID del empleado/vigilante
     
     try {
+        // Verificar que el empleado existe
+        $query_verificar = "SELECT id, nombre_completo FROM empleados WHERE id = ?";
+        $stmt_verificar = $conn->prepare($query_verificar);
+        $stmt_verificar->bind_param("i", $empleado_id);
+        $stmt_verificar->execute();
+        $empleado = $stmt_verificar->get_result()->fetch_assoc();
+
+        if (!$empleado) {
+            throw new Exception("Error: Empleado no encontrado en el sistema.");
+        }
+
         // Validar campos obligatorios
         if (empty($tipo_problema) || empty($descripcion)) {
             throw new Exception('Por favor complete todos los campos obligatorios');
@@ -27,11 +38,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         
         // Insertar en la base de datos
         $query = "INSERT INTO pedidos_ayuda 
-                  (id, tipo_problema, subcategoria, descripcion, urgencia, estado, fecha_creacion) 
+                  (empleado_id, tipo_problema, subcategoria, descripcion, urgencia, estado, fecha_creacion) 
                   VALUES (?, ?, ?, ?, ?, 'pendiente', NOW())";
         
         $stmt = $conn->prepare($query);
-        $stmt->bind_param("issss", $id, $tipo_problema, $subcategoria, $descripcion, $urgencia);
+        $stmt->bind_param("issss", $empleado_id, $tipo_problema, $subcategoria, $descripcion, $urgencia);
         
         if ($stmt->execute()) {
             $mensaje = '✅ Tu solicitud de ayuda ha sido enviada correctamente. Te contactaremos pronto.';
@@ -46,16 +57,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } catch (Exception $e) {
         $mensaje = '❌ Error: ' . $e->getMessage();
         $tipo_mensaje = 'error';
+        error_log("ERROR en ayuda.php: " . $e->getMessage());
     }
 }
 
-// Obtener solicitudes anteriores del usuario
-$query_solicitudes = "SELECT * FROM pedidos_ayuda 
-                      WHERE id = ? 
-                      ORDER BY fecha_creacion DESC 
+// Obtener solicitudes anteriores del empleado
+$query_solicitudes = "SELECT pa.* 
+                      FROM pedidos_ayuda pa
+                      WHERE pa.empleado_id = ? 
+                      ORDER BY pa.fecha_creacion DESC 
                       LIMIT 5";
 $stmt_solicitudes = $conn->prepare($query_solicitudes);
-$stmt_solicitudes->bind_param("i", $_SESSION['id']);
+$stmt_solicitudes->bind_param("i", $_SESSION['usuario_id']);
 $stmt_solicitudes->execute();
 $solicitudes_anteriores = $stmt_solicitudes->get_result()->fetch_all(MYSQLI_ASSOC);
 ?>

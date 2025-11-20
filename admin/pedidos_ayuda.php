@@ -32,10 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['responder'])) {
     }
 }
 
-// Obtener todos los pedidos de ayuda
-$query_pedidos = "SELECT pa.*, u.nombre_completo, u.cedula 
+// Obtener todos los pedidos de ayuda con información del empleado
+$query_pedidos = "SELECT pa.*, e.nombre_completo, e.cedula, e.usuario_login 
                   FROM pedidos_ayuda pa
-                  INNER JOIN usuarios_parqueadero u ON pa.id = u.id
+                  INNER JOIN empleados e ON pa.empleado_id = e.id
                   ORDER BY 
                     CASE pa.urgencia 
                         WHEN 'alta' THEN 1
@@ -71,6 +71,12 @@ $total_altos = array_filter($pedidos, function($p) { return $p['urgencia'] === '
                         <h4><i class="fas fa-life-ring me-2"></i>Pedidos de Ayuda - Panel de Administración</h4>
                     </div>
                     <div class="card-body">
+                        <?php if (isset($mensaje)): ?>
+                            <div class="alert alert-<?= $tipo_mensaje === 'success' ? 'success' : 'danger' ?>">
+                                <?= htmlspecialchars($mensaje) ?>
+                            </div>
+                        <?php endif; ?>
+
                         <!-- Estadísticas -->
                         <div class="row mb-4">
                             <div class="col-md-3">
@@ -104,7 +110,7 @@ $total_altos = array_filter($pedidos, function($p) { return $p['urgencia'] === '
                             <table class="table table-striped">
                                 <thead>
                                     <tr>
-                                        <th>Usuario</th>
+                                        <th>Empleado</th>
                                         <th>Tipo</th>
                                         <th>Descripción</th>
                                         <th>Urgencia</th>
