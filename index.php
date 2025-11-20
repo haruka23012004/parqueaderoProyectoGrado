@@ -265,30 +265,35 @@
 </head>
 <body>
     <!-- Navbar -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="#">
-                <img src="assets/img/logoUniguajira.png" alt="Logo Universidad">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link active" href="index.php"><i class="fas fa-home"></i> Inicio</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="registro.php"><i class="fas fa-user-plus"></i> Registro</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="acceso/login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
-                    </li>
-                </ul>
-            </div>
+<nav class="navbar navbar-expand-lg navbar-dark">
+    <div class="container">
+        <a class="navbar-brand" href="#">
+            <img src="assets/img/logoUniguajira.png" alt="Logo Universidad">
+        </a>
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+            <ul class="navbar-nav ms-auto">
+                <li class="nav-item">
+                    <a class="nav-link active" href="index.php"><i class="fas fa-home"></i> Inicio</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="registro.php"><i class="fas fa-user-plus"></i> Registro</a>
+                </li>
+                <li class="nav-item">
+                    <a class="nav-link" href="acceso/login.php"><i class="fas fa-sign-in-alt"></i> Login</a>
+                </li>
+                <!-- Botón "Perdí mi Carnet" -->
+                <li class="nav-item">
+                    <a class="nav-link btn-carnet-perdido" href="recuperar_carnet.php" style="background-color: var(--color-rojo); color: white !important;">
+                        <i class="fas fa-id-card"></i> Perdí mi Carnet
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
-
+    </div>
+</nav>
     
     <section class="hero-section">
         <div class="container">
