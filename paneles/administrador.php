@@ -246,7 +246,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                     <div class="d-flex align-items-center">
 
                     <li class="nav-item">
-                        <a class="nav-link" href="reportes_carnet_perdido.php">
+                        <a class="nav-link" href="../admin/reportes_carnet_perdido.php">
                             <i class="fas fa-id-card"></i> Reportes Carnet Perdido
                         </a>
                     </li>
