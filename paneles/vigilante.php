@@ -85,10 +85,6 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                             <i class="fas fa-key"></i> Cambiar Contraseña
                         </a>
                         
-                        <!-- Botón Cerrar Sesión -->
-                        <a href="../acceso/logout.php" class="btn btn-outline-light">
-                            <i class="fas fa-sign-out-alt"></i> Cerrar Sesión
-                        </a>
                     </div>
                 </div>
             </nav>
