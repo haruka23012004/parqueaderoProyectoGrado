@@ -8,7 +8,7 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
     exit();
 }
 
-// Obtener todos los registros de acceso con información completa
+// Consulta SIMPLIFICADA para evitar errores
 $query = "SELECT 
             ra.id as registro_id,
             ra.tipo_movimiento,
@@ -23,18 +23,20 @@ $query = "SELECT
             v.marca,
             v.color,
             p.nombre as parqueadero_nombre,
-            p.id as parqueadero_id,
-            e_entrada.nombre as empleado_entrada,
-            e_salida.nombre as empleado_salida
+            p.id as parqueadero_id
           FROM registros_acceso ra
           INNER JOIN usuarios_parqueadero u ON ra.usuario_id = u.id
           INNER JOIN vehiculos v ON ra.vehiculo_id = v.id
           INNER JOIN parqueaderos p ON ra.parqueadero_id = p.id
-          LEFT JOIN empleados e_entrada ON ra.empleado_id_entrada = e_entrada.id
-          LEFT JOIN empleados e_salida ON ra.empleado_id_salida = e_salida.id
           ORDER BY ra.fecha_hora DESC";
 
 $result = $conn->query($query);
+
+// Verificar si hay error en la consulta
+if (!$result) {
+    die("Error en la consulta: " . $conn->error);
+}
+
 $registros = [];
 while ($row = $result->fetch_assoc()) {
     $registros[] = $row;
@@ -49,7 +51,6 @@ while ($row = $result->fetch_assoc()) {
     <title>Consulta de Vehículos - Sistema Parqueadero</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <link rel="stylesheet" href="https://cdn.datatables.net/1.13.6/css/dataTables.bootstrap5.min.css">
     <style>
         .header-section {
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
@@ -67,34 +68,18 @@ while ($row = $result->fetch_assoc()) {
         }
         .badge-entrada {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
         }
         .badge-salida {
             background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+            color: white;
+            padding: 8px 12px;
+            border-radius: 6px;
         }
         .table-hover tbody tr:hover {
             background-color: rgba(0, 123, 255, 0.1);
-        }
-        .dataTables_wrapper .dataTables_filter input {
-            border: 2px solid #dee2e6;
-            border-radius: 5px;
-            padding: 5px 10px;
-        }
-        .dataTables_wrapper .dataTables_length select {
-            border: 2px solid #dee2e6;
-            border-radius: 5px;
-            padding: 5px;
-        }
-        .card-registro {
-            border-left: 4px solid;
-            border-radius: 8px;
-            margin-bottom: 10px;
-            transition: all 0.3s ease;
-        }
-        .card-registro.entrada {
-            border-left-color: #28a745;
-        }
-        .card-registro.salida {
-            border-left-color: #dc3545;
         }
         .stats-card {
             background: white;
@@ -108,22 +93,6 @@ while ($row = $result->fetch_assoc()) {
             font-size: 2rem;
             font-weight: bold;
             margin-bottom: 5px;
-        }
-        .filter-tags {
-            margin-bottom: 15px;
-        }
-        .filter-tag {
-            display: inline-block;
-            background: #e9ecef;
-            padding: 5px 10px;
-            border-radius: 20px;
-            margin-right: 5px;
-            margin-bottom: 5px;
-            font-size: 0.9rem;
-        }
-        .filter-tag .close {
-            margin-left: 5px;
-            cursor: pointer;
         }
     </style>
 </head>
@@ -175,7 +144,7 @@ while ($row = $result->fetch_assoc()) {
             </div>
         </div>
 
-        <!-- Barra de Búsqueda y Filtros -->
+        <!-- Barra de Búsqueda -->
         <div class="row">
             <div class="col-12">
                 <div class="search-box">
@@ -195,30 +164,6 @@ while ($row = $result->fetch_assoc()) {
                             </select>
                         </div>
                     </div>
-                    
-                    <!-- Filtros activos -->
-                    <div id="filter-tags" class="filter-tags"></div>
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <input type="date" id="filter-fecha" class="form-control" placeholder="Filtrar por fecha">
-                        </div>
-                        <div class="col-md-4">
-                            <select id="filter-parqueadero" class="form-select">
-                                <option value="">Todos los parqueaderos</option>
-                                <option value="1">Parqueadero Principal</option>
-                                <option value="2">Parqueadero Secundario</option>
-                            </select>
-                        </div>
-                        <div class="col-md-4">
-                            <select id="filter-vehiculo" class="form-select">
-                                <option value="">Todos los tipos de vehículo</option>
-                                <option value="carro">Carro</option>
-                                <option value="moto">Moto</option>
-                                <option value="bicicleta">Bicicleta</option>
-                            </select>
-                        </div>
-                    </div>
                 </div>
             </div>
         </div>
@@ -227,231 +172,108 @@ while ($row = $result->fetch_assoc()) {
         <div class="row">
             <div class="col-12">
                 <div class="card">
-                    <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center">
+                    <div class="card-header bg-dark text-white">
                         <h4 class="mb-0"><i class="fas fa-list me-2"></i>Historial de Movimientos</h4>
-                        <div>
-                            <button id="btn-export" class="btn btn-sm btn-light">
-                                <i class="fas fa-download me-1"></i>Exportar
-                            </button>
-                            <button id="btn-refresh" class="btn btn-sm btn-light">
-                                <i class="fas fa-sync me-1"></i>Actualizar
-                            </button>
-                        </div>
                     </div>
                     <div class="card-body">
-                        <div class="table-responsive">
-                            <table id="tabla-vehiculos" class="table table-hover table-striped">
-                                <thead>
-                                    <tr>
-                                        <th>Fecha/Hora</th>
-                                        <th>Movimiento</th>
-                                        <th>Nombre</th>
-                                        <th>Cédula</th>
-                                        <th>Código</th>
-                                        <th>Vehículo</th>
-                                        <th>Placa</th>
-                                        <th>Parqueadero</th>
-                                        <th>Empleado</th>
-                                        <th>Acciones</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($registros as $registro): ?>
+                        <?php if (count($registros) > 0): ?>
+                            <div class="table-responsive">
+                                <table class="table table-hover table-striped">
+                                    <thead>
                                         <tr>
-                                            <td>
-                                                <small class="text-muted">
-                                                    <?= date('d/m/Y', strtotime($registro['fecha_hora'])) ?><br>
-                                                    <?= date('H:i:s', strtotime($registro['fecha_hora'])) ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <span class="badge <?= $registro['tipo_movimiento'] === 'entrada' ? 'badge-entrada' : 'badge-salida' ?>">
-                                                    <?= $registro['tipo_movimiento'] === 'entrada' ? 'ENTRADA' : 'SALIDA' ?>
-                                                </span>
-                                            </td>
-                                            <td>
-                                                <strong><?= htmlspecialchars($registro['nombre_completo']) ?></strong>
-                                                <br><small class="text-muted"><?= htmlspecialchars($registro['tipo_usuario']) ?></small>
-                                            </td>
-                                            <td><?= htmlspecialchars($registro['cedula']) ?></td>
-                                            <td><?= htmlspecialchars($registro['codigo_universitario']) ?></td>
-                                            <td>
-                                                <?= htmlspecialchars($registro['tipo_vehiculo']) ?>
-                                                <?php if ($registro['marca']): ?>
-                                                    <br><small class="text-muted"><?= htmlspecialchars($registro['marca']) ?></small>
-                                                <?php endif; ?>
-                                            </td>
-                                            <td>
-                                                <span class="badge bg-dark"><?= htmlspecialchars($registro['placa']) ?></span>
-                                            </td>
-                                            <td><?= htmlspecialchars($registro['parqueadero_nombre']) ?></td>
-                                            <td>
-                                                <small>
-                                                    <?php if ($registro['tipo_movimiento'] === 'entrada' && $registro['empleado_entrada']): ?>
-                                                        <i class="fas fa-sign-in-alt text-success"></i> <?= htmlspecialchars($registro['empleado_entrada']) ?>
-                                                    <?php elseif ($registro['tipo_movimiento'] === 'salida' && $registro['empleado_salida']): ?>
-                                                        <i class="fas fa-sign-out-alt text-danger"></i> <?= htmlspecialchars($registro['empleado_salida']) ?>
-                                                    <?php else: ?>
-                                                        <span class="text-muted">Sistema</span>
-                                                    <?php endif; ?>
-                                                </small>
-                                            </td>
-                                            <td>
-                                                <button class="btn btn-sm btn-outline-primary" 
-                                                        onclick="verDetalles(<?= $registro['registro_id'] ?>)"
-                                                        title="Ver detalles">
-                                                    <i class="fas fa-eye"></i>
-                                                </button>
-                                            </td>
+                                            <th>Fecha/Hora</th>
+                                            <th>Movimiento</th>
+                                            <th>Nombre</th>
+                                            <th>Cédula</th>
+                                            <th>Código</th>
+                                            <th>Vehículo</th>
+                                            <th>Placa</th>
+                                            <th>Parqueadero</th>
                                         </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
+                                    </thead>
+                                    <tbody id="tabla-body">
+                                        <?php foreach ($registros as $registro): ?>
+                                            <tr>
+                                                <td>
+                                                    <small class="text-muted">
+                                                        <?= date('d/m/Y H:i:s', strtotime($registro['fecha_hora'])) ?>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <span class="badge <?= $registro['tipo_movimiento'] === 'entrada' ? 'badge-entrada' : 'badge-salida' ?>">
+                                                        <?= $registro['tipo_movimiento'] === 'entrada' ? 'ENTRADA' : 'SALIDA' ?>
+                                                    </span>
+                                                </td>
+                                                <td>
+                                                    <strong><?= htmlspecialchars($registro['nombre_completo']) ?></strong>
+                                                    <br><small class="text-muted"><?= htmlspecialchars($registro['tipo_usuario']) ?></small>
+                                                </td>
+                                                <td><?= htmlspecialchars($registro['cedula']) ?></td>
+                                                <td><?= htmlspecialchars($registro['codigo_universitario']) ?></td>
+                                                <td>
+                                                    <?= htmlspecialchars($registro['tipo_vehiculo']) ?>
+                                                    <?php if ($registro['marca']): ?>
+                                                        <br><small class="text-muted"><?= htmlspecialchars($registro['marca']) ?></small>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <span class="badge bg-dark"><?= htmlspecialchars($registro['placa']) ?></span>
+                                                </td>
+                                                <td><?= htmlspecialchars($registro['parqueadero_nombre']) ?></td>
+                                            </tr>
+                                        <?php endforeach; ?>
+                                    </tbody>
+                                </table>
+                            </div>
+                        <?php else: ?>
+                            <div class="text-center py-5">
+                                <i class="fas fa-car fa-4x text-muted mb-3"></i>
+                                <h4 class="text-muted">No hay registros</h4>
+                                <p class="text-muted">No se encontraron movimientos en el sistema</p>
+                            </div>
+                        <?php endif; ?>
                     </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <!-- Modal para detalles -->
-    <div class="modal fade" id="detallesModal" tabindex="-1" aria-hidden="true">
-        <div class="modal-dialog modal-lg">
-            <div class="modal-content">
-                <div class="modal-header bg-primary text-white">
-                    <h5 class="modal-title"><i class="fas fa-info-circle me-2"></i>Detalles del Registro</h5>
-                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
-                </div>
-                <div class="modal-body" id="detalles-content">
-                    <!-- Los detalles se cargarán aquí -->
                 </div>
             </div>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-    <script src="https://code.jquery.com/jquery-3.7.0.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/jquery.dataTables.min.js"></script>
-    <script src="https://cdn.datatables.net/1.13.6/js/dataTables.bootstrap5.min.js"></script>
     <script>
-        let dataTable;
-
-        $(document).ready(function() {
-            // Inicializar DataTable
-            dataTable = $('#tabla-vehiculos').DataTable({
-                language: {
-                    url: '//cdn.datatables.net/plug-ins/1.13.6/i18n/es-ES.json'
-                },
-                pageLength: 25,
-                order: [[0, 'desc']],
-                dom: '<"row"<"col-md-6"l><"col-md-6"f>>rt<"row"<"col-md-6"i><"col-md-6"p>>',
-                responsive: true
-            });
-
-            // Búsqueda en tiempo real
-            $('#search-input').on('keyup', function() {
-                dataTable.search(this.value).draw();
-                updateFilterTags();
-            });
-
-            // Filtros adicionales
-            $('#filter-tipo, #filter-fecha, #filter-parqueadero, #filter-vehiculo').on('change', function() {
-                applyFilters();
-                updateFilterTags();
-            });
-
-            // Botones de acción
-            $('#btn-refresh').on('click', function() {
-                location.reload();
-            });
-
-            $('#btn-export').on('click', function() {
-                exportToExcel();
+        // Búsqueda simple en JavaScript puro
+        document.getElementById('search-input').addEventListener('keyup', function() {
+            const searchText = this.value.toLowerCase();
+            const filterTipo = document.getElementById('filter-tipo').value;
+            const rows = document.querySelectorAll('#tabla-body tr');
+            
+            rows.forEach(row => {
+                const rowText = row.textContent.toLowerCase();
+                const tipoMovimiento = row.querySelector('.badge').textContent.trim().toLowerCase();
+                
+                let showRow = true;
+                
+                // Aplicar búsqueda
+                if (searchText && !rowText.includes(searchText)) {
+                    showRow = false;
+                }
+                
+                // Aplicar filtro por tipo
+                if (filterTipo) {
+                    const tipoBuscado = filterTipo === 'entrada' ? 'entrada' : 'salida';
+                    if (tipoMovimiento !== tipoBuscado) {
+                        showRow = false;
+                    }
+                }
+                
+                row.style.display = showRow ? '' : 'none';
             });
         });
 
-        function applyFilters() {
-            let tipo = $('#filter-tipo').val();
-            let fecha = $('#filter-fecha').val();
-            let parqueadero = $('#filter-parqueadero').val();
-            let vehiculo = $('#filter-vehiculo').val();
-
-            // Aplicar filtros combinados
-            dataTable.column(1).search(tipo);
-            dataTable.column(0).search(fecha);
-            dataTable.column(7).search(parqueadero);
-            dataTable.column(5).search(vehiculo);
-            
-            dataTable.draw();
-        }
-
-        function updateFilterTags() {
-            let tags = $('#filter-tags');
-            tags.empty();
-
-            let filters = [
-                { id: 'filter-tipo', text: 'Movimiento' },
-                { id: 'filter-fecha', text: 'Fecha' },
-                { id: 'filter-parqueadero', text: 'Parqueadero' },
-                { id: 'filter-vehiculo', text: 'Vehículo' }
-            ];
-
-            filters.forEach(filter => {
-                let value = $('#' + filter.id).val();
-                if (value) {
-                    let displayValue = value;
-                    if (filter.id === 'filter-tipo') {
-                        displayValue = value === 'entrada' ? 'Entradas' : 'Salidas';
-                    } else if (filter.id === 'filter-parqueadero') {
-                        displayValue = value === '1' ? 'Principal' : 'Secundario';
-                    }
-                    
-                    let tag = `<span class="filter-tag">
-                        ${filter.text}: ${displayValue}
-                        <span class="close" onclick="clearFilter('${filter.id}')">×</span>
-                    </span>`;
-                    tags.append(tag);
-                }
-            });
-
-            if ($('#search-input').val()) {
-                let tag = `<span class="filter-tag">
-                    Búsqueda: "${$('#search-input').val()}"
-                    <span class="close" onclick="clearSearch()">×</span>
-                </span>`;
-                tags.append(tag);
-            }
-        }
-
-        function clearFilter(filterId) {
-            $('#' + filterId).val('');
-            applyFilters();
-            updateFilterTags();
-        }
-
-        function clearSearch() {
-            $('#search-input').val('');
-            dataTable.search('').draw();
-            updateFilterTags();
-        }
-
-        function verDetalles(registroId) {
-            // Aquí puedes cargar detalles más específicos via AJAX si es necesario
-            // Por ahora mostramos un mensaje básico
-            $('#detalles-content').html(`
-                <div class="text-center">
-                    <i class="fas fa-info-circle fa-3x text-primary mb-3"></i>
-                    <h5>Detalles del Registro #${registroId}</h5>
-                    <p class="text-muted">Funcionalidad de detalles en desarrollo</p>
-                </div>
-            `);
-            $('#detallesModal').modal('show');
-        }
-
-        function exportToExcel() {
-            // Implementar exportación a Excel
-            alert('Funcionalidad de exportación en desarrollo');
-        }
+        // Filtro por tipo
+        document.getElementById('filter-tipo').addEventListener('change', function() {
+            // Disparar el evento de búsqueda para aplicar ambos filtros
+            document.getElementById('search-input').dispatchEvent(new Event('keyup'));
+        });
     </script>
 </body>
 </html>
