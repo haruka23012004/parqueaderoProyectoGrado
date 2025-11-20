@@ -292,41 +292,51 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                             </div>
                         </div>
                         <div class="col-sm-6 col-md-4 col-lg-3">
-                            <div class="card card-dashboard bg-success text-white">
-                                <div class="card-body">
-                                    <h5 class="card-title">Vehículos Hoy</h5>
-                                    <p class="card-text display-5"><?= $vehiculos_hoy ?></p>
-                                    <div class="stats-small">
-                                        Registrados hoy
-                                    </div>
+                        <div class="card card-dashboard" style="background: linear-gradient(135deg, #198754 0%, #20c997 100%); color: white;">
+                            <div class="card-body">
+                                <h5 class="card-title">Vehículos Hoy</h5>
+                                <p class="card-text display-5"><?= $vehiculos_hoy ?></p>
+                                <div class="stats-small" style="color: rgba(255,255,255,0.8);">
+                                    Registrados hoy
                                 </div>
                             </div>
                         </div>
                     </div>
 
-                    <!-- Sección de Acciones Rápidas -->
-                    <div class="row mt-4 mt-md-5">
-                        <div class="col-12">
-                            <div class="card">
-                                <div class="card-header">
-                                    <h5>Acciones Rápidas</h5>
-                                </div>
-                                <div class="card-body quick-actions">
-                                    <div class="d-flex flex-column flex-md-row gap-3">
-                                        <a href="../registro_empleados.php" class="btn btn-primary">
-                                            <i class="bi bi-person-plus"></i> Registrar Nuevo Empleado
-                                        </a>
-                                        <a href="../admin/solicitudes_pendientes.php" class="btn btn-warning">
-                                            <i class="bi bi-clock-history"></i> Revisar Solicitudes
-                                        </a>
-                                        <a href="#" class="btn btn-outline-info">
-                                            <i class="bi bi-graph-up"></i> Ver Estadísticas
-                                        </a>
-                                    </div>
-                                </div>
-                            </div>
-                        </div>
+                    <!-- Sección de Acciones Rápidas - Versión Mejorada -->
+<div class="row mt-4 mt-md-5">
+    <div class="col-12">
+        <div class="card">
+            <div class="card-header">
+                <h5><i class="bi bi-lightning"></i> Acciones Rápidas</h5>
+            </div>
+            <div class="card-body quick-actions">
+                <div class="row g-3">
+                    <div class="col-md-3 col-sm-6">
+                        <a href="../registro_empleados.php" class="btn btn-primary w-100">
+                            <i class="bi bi-person-plus"></i> Nuevo Empleado
+                        </a>
                     </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="../admin/solicitudes_pendientes.php" class="btn btn-warning w-100">
+                            <i class="bi bi-clock-history"></i> Revisar Solicitudes
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="../vigilante/consultar_vehiculos.php" class="btn btn-info w-100" target="_blank">
+                            <i class="bi bi-eye"></i> Panel Vigilante
+                        </a>
+                    </div>
+                    <div class="col-md-3 col-sm-6">
+                        <a href="../admin/pedidos_ayuda.php" class="btn btn-danger w-100">
+                            <i class="bi bi-question-circle"></i> Pedidos de Ayuda
+                        </a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
                     <!-- Sección de Estadísticas de Vehículos -->
                     <div class="row mt-4">
