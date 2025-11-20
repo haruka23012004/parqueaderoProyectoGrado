@@ -4,8 +4,22 @@ require_once '../includes/conexion.php';
 
 // Verificar que sea vigilante
 if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
-    header('Location: /parqueaderoProyectoGrado/acceso/login.php');
+    header('Location: ../acceso/login.php');
     exit();
+}
+
+// Obtener parqueaderos activos
+$parqueaderos = [];
+try {
+    $query_parq = "SELECT id, nombre, capacidad_actual, capacidad_total 
+                   FROM parqueaderos 
+                   WHERE estado = 'activo'";
+    $result_parq = $conn->query($query_parq);
+    if ($result_parq) {
+        $parqueaderos = $result_parq->fetch_all(MYSQLI_ASSOC);
+    }
+} catch (Exception $e) {
+    error_log("Error obteniendo parqueaderos: " . $e->getMessage());
 }
 
 // Procesar el formulario si se envió
@@ -16,8 +30,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $cedula = trim($_POST['cedula']);
     $parqueadero_id = intval($_POST['parqueadero_id']);
     $tipo_movimiento = $_POST['tipo_movimiento'];
+    $empleado_id = $_SESSION['usuario_id']; // ID del vigilante que registra
     
     try {
+        // Validaciones básicas
+        if (empty($cedula) || empty($parqueadero_id) || empty($tipo_movimiento)) {
+            throw new Exception('Todos los campos son obligatorios');
+        }
+
         // Buscar usuario por cédula
         $query = "SELECT u.*, v.tipo as tipo_vehiculo, v.placa, v.id as vehiculo_id
                   FROM usuarios_parqueadero u 
@@ -30,66 +50,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $stmt->get_result();
         
         if ($result->num_rows === 0) {
-            $mensaje = 'Usuario no encontrado o no autorizado';
-            $tipo_mensaje = 'error';
-        } else {
-            $userData = $result->fetch_assoc();
-            
-            // Verificar parqueadero
-            $query_parqueadero = "SELECT id, nombre, capacidad_actual FROM parqueaderos WHERE id = ?";
-            $stmt_parqueadero = $conn->prepare($query_parqueadero);
-            $stmt_parqueadero->bind_param("i", $parqueadero_id);
-            $stmt_parqueadero->execute();
-            $parqueadero_result = $stmt_parqueadero->get_result();
-            
-            if ($parqueadero_result->num_rows === 0) {
-                $mensaje = 'Parqueadero no válido';
-                $tipo_mensaje = 'error';
-            } else {
-                $parqueadero_data = $parqueadero_result->fetch_assoc();
-                
-                // Para ENTRADAS: verificar capacidad
-                if ($tipo_movimiento === 'entrada' && $parqueadero_data['capacidad_actual'] <= 0) {
-                    $mensaje = 'Parqueadero lleno. No se puede registrar entrada.';
-                    $tipo_mensaje = 'error';
-                } else {
-                    // Registrar el movimiento
-                    $insertQuery = "INSERT INTO registros_acceso (usuario_id, vehiculo_id, parqueadero_id, tipo_movimiento, metodo_acceso, fecha_hora) 
-                                    VALUES (?, ?, ?, ?, 'manual', NOW())";
-                    
-                    $insertStmt = $conn->prepare($insertQuery);
-                    $insertStmt->bind_param("iiis", $userData['id'], $userData['vehiculo_id'], $parqueadero_id, $tipo_movimiento);
-                    
-                    if ($insertStmt->execute()) {
-                        // Actualizar capacidad del parqueadero
-                        if ($tipo_movimiento === 'entrada') {
-                            $updateQuery = "UPDATE parqueaderos 
-                                           SET capacidad_actual = capacidad_actual - 1 
-                                           WHERE id = ? AND capacidad_actual > 0";
-                        } else {
-                            $updateQuery = "UPDATE parqueaderos 
-                                           SET capacidad_actual = capacidad_actual + 1 
-                                           WHERE id = ? AND capacidad_actual < capacidad_total";
-                        }
-                        
-                        $updateStmt = $conn->prepare($updateQuery);
-                        $updateStmt->bind_param("i", $parqueadero_id);
-                        $updateStmt->execute();
-                        
-                        $mensaje = $tipo_movimiento === 'entrada' ? 'Entrada registrada exitosamente' : 'Salida registrada exitosamente';
-                        $tipo_mensaje = 'success';
-                        
-                        // Limpiar formulario después de éxito
-                        $_POST['cedula'] = '';
-                    } else {
-                        $mensaje = 'Error al registrar el movimiento: ' . $insertStmt->error;
-                        $tipo_mensaje = 'error';
-                    }
-                }
+            throw new Exception('Usuario no encontrado o no autorizado');
+        }
+        
+        $userData = $result->fetch_assoc();
+        
+        // Verificar parqueadero
+        $query_parqueadero = "SELECT id, nombre, capacidad_actual, capacidad_total 
+                             FROM parqueaderos 
+                             WHERE id = ? AND estado = 'activo'";
+        $stmt_parqueadero = $conn->prepare($query_parqueadero);
+        $stmt_parqueadero->bind_param("i", $parqueadero_id);
+        $stmt_parqueadero->execute();
+        $parqueadero_result = $stmt_parqueadero->get_result();
+        
+        if ($parqueadero_result->num_rows === 0) {
+            throw new Exception('Parqueadero no válido o inactivo');
+        }
+        
+        $parqueadero_data = $parqueadero_result->fetch_assoc();
+        
+        // Verificar si ya tiene una entrada activa
+        $query_entrada_activa = "SELECT id FROM registros_acceso 
+                                WHERE usuario_id = ? AND tipo_movimiento = 'entrada'
+                                AND NOT EXISTS (
+                                    SELECT 1 FROM registros_acceso ra2 
+                                    WHERE ra2.usuario_id = registros_acceso.usuario_id 
+                                    AND ra2.tipo_movimiento = 'salida' 
+                                    AND ra2.fecha_hora > registros_acceso.fecha_hora
+                                )";
+        $stmt_entrada = $conn->prepare($query_entrada_activa);
+        $stmt_entrada->bind_param("i", $userData['id']);
+        $stmt_entrada->execute();
+        $result_entrada = $stmt_entrada->get_result();
+        $tiene_entrada_activa = $result_entrada->num_rows > 0;
+
+        // Validaciones de negocio
+        if ($tipo_movimiento === 'entrada') {
+            if ($tiene_entrada_activa) {
+                throw new Exception('El usuario ya tiene una entrada registrada y no ha salido');
+            }
+            if ($parqueadero_data['capacidad_actual'] <= 0) {
+                throw new Exception('Parqueadero lleno. No se puede registrar entrada.');
+            }
+        } else { // Salida
+            if (!$tiene_entrada_activa) {
+                throw new Exception('El usuario no tiene una entrada registrada para salir');
             }
         }
+
+        // Registrar el movimiento
+        $insertQuery = "INSERT INTO registros_acceso 
+                        (usuario_id, vehiculo_id, parqueadero_id, empleado_id, tipo_movimiento, metodo_acceso, fecha_hora) 
+                        VALUES (?, ?, ?, ?, ?, 'manual', NOW())";
+        
+        $insertStmt = $conn->prepare($insertQuery);
+        $insertStmt->bind_param("iiiis", 
+            $userData['id'], 
+            $userData['vehiculo_id'], 
+            $parqueadero_id, 
+            $empleado_id,
+            $tipo_movimiento
+        );
+        
+        if ($insertStmt->execute()) {
+            // Actualizar capacidad del parqueadero
+            if ($tipo_movimiento === 'entrada') {
+                $updateQuery = "UPDATE parqueaderos 
+                               SET capacidad_actual = capacidad_actual - 1 
+                               WHERE id = ?";
+            } else {
+                $updateQuery = "UPDATE parqueaderos 
+                               SET capacidad_actual = capacidad_actual + 1 
+                               WHERE id = ?";
+            }
+            
+            $updateStmt = $conn->prepare($updateQuery);
+            $updateStmt->bind_param("i", $parqueadero_id);
+            $updateStmt->execute();
+            
+            $mensaje = $tipo_movimiento === 'entrada' 
+                ? '✅ Entrada registrada exitosamente' 
+                : '✅ Salida registrada exitosamente';
+            $tipo_mensaje = 'success';
+            
+            // Limpiar formulario después de éxito
+            $_POST['cedula'] = '';
+            
+        } else {
+            throw new Exception('Error al registrar el movimiento: ' . $insertStmt->error);
+        }
+        
     } catch (Exception $e) {
-        $mensaje = 'Error del sistema: ' . $e->getMessage();
+        $mensaje = '❌ Error: ' . $e->getMessage();
         $tipo_mensaje = 'error';
     }
 }
@@ -107,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         body { 
             background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
             min-height: 100vh; 
+            padding-top: 20px;
         }
         .form-container { 
             background: white; 
@@ -161,6 +215,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             border: none;
             padding: 15px;
         }
+        .parqueadero-info {
+            font-size: 0.9rem;
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -186,7 +244,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     <!-- Mensajes -->
                     <?php if ($mensaje): ?>
                         <div class="alert alert-<?= $tipo_mensaje === 'success' ? 'success' : 'danger' ?> alert-custom m-3">
-                            <i class="fas fa-<?= $tipo_mensaje === 'success' ? 'check' : 'exclamation-triangle' ?> me-2"></i>
                             <?= htmlspecialchars($mensaje) ?>
                         </div>
                     <?php endif; ?>
@@ -200,9 +257,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             </label>
                             <select class="form-select form-select-lg" id="select-parqueadero" name="parqueadero_id" required>
                                 <option value="">-- Seleccione un parqueadero --</option>
-                                <option value="1">🏢 Parqueadero 1 - Principal</option>
-                                <option value="2">🚗 Parqueadero 2 - Secundario</option>
+                                <?php foreach ($parqueaderos as $parq): ?>
+                                    <option value="<?= $parq['id'] ?>" 
+                                            data-capacidad="<?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?>">
+                                        🏢 <?= htmlspecialchars($parq['nombre']) ?> 
+                                        (<?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?> disponibles)
+                                    </option>
+                                <?php endforeach; ?>
                             </select>
+                            <div class="form-text" id="info-parqueadero"></div>
                         </div>
 
                         <!-- Botones Rápidos de Acción -->
@@ -237,7 +300,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                     <input type="text" class="form-control form-control-lg" id="cedula" name="cedula" 
                                            placeholder="Ingrese la cédula del usuario" 
                                            value="<?= isset($_POST['cedula']) ? htmlspecialchars($_POST['cedula']) : '' ?>"
-                                           required>
+                                           required pattern="[0-9]+" title="Solo números permitidos">
                                     <button type="button" class="btn btn-primary" onclick="buscarUsuario()">
                                         <i class="fas fa-search me-1"></i>Buscar
                                     </button>
@@ -287,6 +350,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         let movimientoSeleccionado = '';
         let usuarioEncontrado = null;
 
+        // Actualizar información del parqueadero seleccionado
+        document.getElementById('select-parqueadero').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const infoDiv = document.getElementById('info-parqueadero');
+            
+            if (selectedOption.value && selectedOption.dataset.capacidad) {
+                infoDiv.textContent = `Capacidad: ${selectedOption.dataset.capacidad}`;
+            } else {
+                infoDiv.textContent = '';
+            }
+        });
+
         function setMovimiento(tipo) {
             movimientoSeleccionado = tipo;
             document.getElementById('tipo_movimiento').value = tipo;
@@ -297,12 +372,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (tipo === 'entrada') {
                 btnText.textContent = 'CONFIRMAR ENTRADA MANUAL';
-                btnConfirmar.classList.remove('btn-secondary');
-                btnConfirmar.classList.add('btn-success');
+                btnConfirmar.className = 'btn btn-success btn-lg w-100';
             } else {
                 btnText.textContent = 'CONFIRMAR SALIDA MANUAL';
-                btnConfirmar.classList.remove('btn-secondary');
-                btnConfirmar.classList.add('btn-danger');
+                btnConfirmar.className = 'btn btn-danger btn-lg w-100';
             }
             
             // Habilitar botón si ya hay usuario
@@ -319,6 +392,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             
             if (!cedula) {
                 alert('Por favor ingrese una cédula');
+                return;
+            }
+
+            // Validar que solo sean números
+            if (!/^\d+$/.test(cedula)) {
+                alert('La cédula debe contener solo números');
                 return;
             }
 
@@ -339,6 +418,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             .then(result => {
                 if (result.success) {
                     usuarioEncontrado = result.data;
+                    const estadoEntrada = result.data.tiene_entrada_activa ? 
+                        '<span class="badge bg-warning">DENTRO</span>' : 
+                        '<span class="badge bg-secondary">FUERA</span>';
+                    
                     userDetails.innerHTML = `
                         <div class="row">
                             <div class="col-md-6">
@@ -349,7 +432,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             <div class="col-md-6">
                                 <strong>Vehículo:</strong> ${result.data.placa}<br>
                                 <strong>Tipo:</strong> ${result.data.tipo_vehiculo}<br>
-                                <strong>Estado:</strong> <span class="badge bg-success">AUTORIZADO</span>
+                                <strong>Estado:</strong> ${estadoEntrada}
                             </div>
                         </div>
                     `;
@@ -378,6 +461,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </div>
                 `;
                 btnConfirmar.disabled = true;
+                console.error('Error:', error);
             });
         }
 
