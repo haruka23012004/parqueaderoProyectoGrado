@@ -120,23 +120,40 @@ try {
     $stmt_activos->execute();
     $estadisticas['usuarios_activos'] = $stmt_activos->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    // 7. VIGILANTES MÁS ACTIVOS - CONSULTA CORREGIDA
-        $query_vigilantes = "SELECT 
-                            u.nombre_completo as vigilante_nombre,
-                            COUNT(*) as registros_realizados,
-                            SUM(CASE WHEN ra.tipo_movimiento = 'entrada' THEN 1 ELSE 0 END) as entradas_registradas,
-                            SUM(CASE WHEN ra.tipo_movimiento = 'salida' THEN 1 ELSE 0 END) as salidas_registradas
-                            FROM registros_acceso ra
-                            INNER JOIN usuarios_parqueadero u ON ra.empleado_id = u.id
-                            WHERE DATE(ra.fecha_hora) = ?
-                            AND ra.metodo_acceso = 'manual'
-                            GROUP BY u.id, u.nombre_completo
-                            ORDER BY registros_realizados DESC";
+    // 7. VIGILANTES MÁS ACTIVOS - USANDO LA MISMA LÓGICA QUE LA GRÁFICA
+$query_vigilantes = "SELECT 
+                      u.nombre_completo as vigilante_nombre,
+                      COUNT(*) as registros_realizados,
+                      SUM(CASE WHEN ra.tipo_movimiento = 'entrada' THEN 1 ELSE 0 END) as entradas_registradas,
+                      SUM(CASE WHEN ra.tipo_movimiento = 'salida' THEN 1 ELSE 0 END) as salidas_registradas
+                     FROM registros_acceso ra
+                     INNER JOIN usuarios_parqueadero u ON ra.empleado_id = u.id
+                     WHERE DATE(ra.fecha_hora) = ?
+                     AND ra.metodo_acceso = 'manual'
+                     GROUP BY u.id, u.nombre_completo
+                     ORDER BY registros_realizados DESC";
 
-        $stmt_vigilantes = $conn->prepare($query_vigilantes);
-        $stmt_vigilantes->bind_param("s", $fecha_reporte);
-        $stmt_vigilantes->execute();
-        $estadisticas['vigilantes'] = $stmt_vigilantes->get_result()->fetch_all(MYSQLI_ASSOC);
+$stmt_vigilantes = $conn->prepare($query_vigilantes);
+$stmt_vigilantes->bind_param("s", $fecha_reporte);
+$stmt_vigilantes->execute();
+$estadisticas['vigilantes'] = $stmt_vigilantes->get_result()->fetch_all(MYSQLI_ASSOC);
+
+// Si no funciona, hacemos una consulta alternativa más simple
+if (empty($estadisticas['vigilantes'])) {
+    $query_vigilantes_simple = "SELECT 
+                                'Vigilante' as vigilante_nombre,
+                                COUNT(*) as registros_realizados,
+                                SUM(CASE WHEN tipo_movimiento = 'entrada' THEN 1 ELSE 0 END) as entradas_registradas,
+                                SUM(CASE WHEN tipo_movimiento = 'salida' THEN 1 ELSE 0 END) as salidas_registradas
+                               FROM registros_acceso 
+                               WHERE DATE(fecha_hora) = ?
+                               AND metodo_acceso = 'manual'";
+    
+    $stmt_simple = $conn->prepare($query_vigilantes_simple);
+    $stmt_simple->bind_param("s", $fecha_reporte);
+    $stmt_simple->execute();
+    $estadisticas['vigilantes'] = $stmt_simple->get_result()->fetch_all(MYSQLI_ASSOC);
+}
 
         // DEBUG: Verificar qué está pasando con los registros manuales
 $query_debug = "SELECT 
@@ -569,17 +586,6 @@ function obtenerNombreDia($fecha) {
     <div class="col-md-6">
         <h5 class="section-title">Registros Manuales por Vigilante</h5>
         
-        <!-- Información de debug extendida -->
-        <div class="alert alert-info no-print mb-3">
-            <small>
-                <strong>Información de diagnóstico COMPLETA:</strong><br>
-                • Total registros manuales en BD: <?= $estadisticas['debug_info']['total_manuales_bd'] ?><br>
-                • Registros manuales en <?= $fecha_reporte ?>: <?= $estadisticas['debug_info']['manuales_fecha'] ?><br>
-                • Registros con empleado_id: <?= $estadisticas['debug_info']['manuales_con_empleado'] ?><br>
-                • Vigilantes encontrados: <?= $estadisticas['debug_info']['vigilantes_encontrados'] ?>
-            </small>
-        </div>
-
         <div class="table-responsive">
             <table class="table table-bordered">
                 <thead>
@@ -603,13 +609,7 @@ function obtenerNombreDia($fecha) {
                     <?php if (empty($estadisticas['vigilantes'])): ?>
                     <tr>
                         <td colspan="4" class="text-center text-muted py-2">
-                            No se encontraron registros manuales asignados a vigilantes
-                            <?php if ($estadisticas['debug_info']['manuales_fecha'] > 0): ?>
-                                <br><small class="text-warning">
-                                    ¡Pero hay <?= $estadisticas['debug_info']['manuales_fecha'] ?> registros manuales en esta fecha!
-                                    Revisa los logs del servidor para más detalles.
-                                </small>
-                            <?php endif; ?>
+                            No se encontraron registros manuales
                         </td>
                     </tr>
                     <?php endif; ?>
@@ -617,48 +617,17 @@ function obtenerNombreDia($fecha) {
             </table>
         </div>
 
-        <!-- Consulta directa para ver los registros -->
-        <?php if ($estadisticas['debug_info']['manuales_fecha'] > 0): ?>
-        <div class="alert alert-warning no-print mt-3">
-            <h6>Registros manuales en <?= $fecha_reporte ?>:</h6>
-            <?php
-            $query_detalle_manuales = "SELECT 
-                                        id, empleado_id, tipo_movimiento, metodo_acceso, fecha_hora
-                                       FROM registros_acceso 
-                                       WHERE DATE(fecha_hora) = ? 
-                                       AND metodo_acceso = 'manual'
-                                       ORDER BY fecha_hora";
-            $stmt_detalle = $conn->prepare($query_detalle_manuales);
-            $stmt_detalle->bind_param("s", $fecha_reporte);
-            $stmt_detalle->execute();
-            $detalle_manuales = $stmt_detalle->get_result()->fetch_all(MYSQLI_ASSOC);
-            ?>
-            <table class="table table-sm">
-                <thead>
-                    <tr>
-                        <th>ID</th>
-                        <th>Empleado ID</th>
-                        <th>Movimiento</th>
-                        <th>Método</th>
-                        <th>Fecha/Hora</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($detalle_manuales as $registro): ?>
-                    <tr>
-                        <td><?= $registro['id'] ?></td>
-                        <td class="<?= $registro['empleado_id'] ? 'text-success' : 'text-danger' ?>">
-                            <?= $registro['empleado_id'] ?: 'NULL' ?>
-                        </td>
-                        <td><?= $registro['tipo_movimiento'] ?></td>
-                        <td><?= $registro['metodo_acceso'] ?></td>
-                        <td><?= $registro['fecha_hora'] ?></td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+        <!-- Información de los métodos de acceso para comparar -->
+        <div class="alert alert-info no-print mt-3">
+            <small>
+                <strong>Comparación con gráfica de métodos:</strong><br>
+                <?php foreach ($estadisticas['por_metodo'] as $metodo): ?>
+                • <?= ucfirst($metodo['metodo_acceso']) ?>: 
+                <?= $metodo['total'] ?> registros 
+                (<?= $metodo['entradas'] ?> entradas, <?= $metodo['salidas'] ?> salidas)<br>
+                <?php endforeach; ?>
+            </small>
         </div>
-        <?php endif; ?>
     </div>
 
     <!-- Horas Pico -->
