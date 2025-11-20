@@ -221,7 +221,7 @@ while ($row = $result_vehiculos_tipo->fetch_assoc()) {
                             </a>
                         </li>
                         <li class="nav-item">
-                            <a href="#" class="nav-link">
+                            <a href="../admin/reportes.php" class="nav-link">
                                 <i class="bi bi-graph-up"></i> Reportes
                             </a>
                         </li>
