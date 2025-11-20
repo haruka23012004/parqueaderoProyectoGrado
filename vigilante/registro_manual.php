@@ -27,15 +27,20 @@ $mensaje = '';
 $tipo_mensaje = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    $cedula = trim($_POST['cedula']);
-    $parqueadero_id = intval($_POST['parqueadero_id']);
-    $tipo_movimiento = $_POST['tipo_movimiento'];
+    $cedula = trim($_POST['cedula'] ?? '');
+    $parqueadero_id = intval($_POST['parqueadero_id'] ?? 0);
+    $tipo_movimiento = $_POST['tipo_movimiento'] ?? '';
     $empleado_id = $_SESSION['usuario_id']; // ID del vigilante que registra
+    
+    // DEBUG: Ver qué datos llegan
+    error_log("Datos POST: cedula=$cedula, parqueadero_id=$parqueadero_id, tipo_movimiento=$tipo_movimiento");
     
     try {
         // Validaciones básicas
         if (empty($cedula) || empty($parqueadero_id) || empty($tipo_movimiento)) {
-            throw new Exception('Todos los campos son obligatorios');
+            throw new Exception('Todos los campos son obligatorios. Cédula: ' . ($cedula ?: 'vacía') . 
+                              ', Parqueadero: ' . ($parqueadero_id ?: 'vacío') . 
+                              ', Movimiento: ' . ($tipo_movimiento ?: 'vacío'));
         }
 
         // Buscar usuario por cédula
@@ -50,7 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = $stmt->get_result();
         
         if ($result->num_rows === 0) {
-            throw new Exception('Usuario no encontrado o no autorizado');
+            throw new Exception('Usuario no encontrado o no autorizado. Cédula: ' . $cedula);
         }
         
         $userData = $result->fetch_assoc();
@@ -65,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $parqueadero_result = $stmt_parqueadero->get_result();
         
         if ($parqueadero_result->num_rows === 0) {
-            throw new Exception('Parqueadero no válido o inactivo');
+            throw new Exception('Parqueadero no válido o inactivo. ID: ' . $parqueadero_id);
         }
         
         $parqueadero_data = $parqueadero_result->fetch_assoc();
@@ -219,6 +224,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             font-size: 0.9rem;
             color: #6c757d;
         }
+        .btn-action-selected {
+            transform: scale(1.05);
+            box-shadow: 0 0 0 3px rgba(0,123,255,0.5);
+        }
     </style>
 </head>
 <body>
@@ -250,50 +259,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     <!-- Formulario Principal -->
                     <div class="p-4">
-                        <!-- Selector de Parqueadero -->
-                        <div class="mb-4">
-                            <label for="select-parqueadero" class="form-label fw-bold">
-                                <i class="fas fa-parking me-2"></i>Seleccionar Parqueadero
-                            </label>
-                            <select class="form-select form-select-lg" id="select-parqueadero" name="parqueadero_id" required>
-                                <option value="">-- Seleccione un parqueadero --</option>
-                                <?php foreach ($parqueaderos as $parq): ?>
-                                    <option value="<?= $parq['id'] ?>" 
-                                            data-capacidad="<?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?>">
-                                        🏢 <?= htmlspecialchars($parq['nombre']) ?> 
-                                        (<?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?> disponibles)
-                                    </option>
-                                <?php endforeach; ?>
-                            </select>
-                            <div class="form-text" id="info-parqueadero"></div>
-                        </div>
-
-                        <!-- Botones Rápidos de Acción -->
-                        <div class="mb-4">
-                            <label class="form-label fw-bold">
-                                <i class="fas fa-bolt me-2"></i>Acción Rápida
-                            </label>
-                            <div class="row">
-                                <div class="col-md-6">
-                                    <button type="button" class="btn btn-entrada btn-rapido w-100" onclick="setMovimiento('entrada')">
-                                        <i class="fas fa-sign-in-alt me-2"></i>REGISTRAR ENTRADA
-                                    </button>
-                                </div>
-                                <div class="col-md-6">
-                                    <button type="button" class="btn btn-salida btn-rapido w-100" onclick="setMovimiento('salida')">
-                                        <i class="fas fa-sign-out-alt me-2"></i>REGISTRAR SALIDA
-                                    </button>
-                                </div>
-                            </div>
-                        </div>
-
-                        <!-- Formulario de Búsqueda -->
                         <form method="POST" id="registro-form">
-                            <input type="hidden" name="tipo_movimiento" id="tipo_movimiento" value="">
-                            
+                            <!-- Selector de Parqueadero -->
+                            <div class="mb-4">
+                                <label for="select-parqueadero" class="form-label fw-bold">
+                                    <i class="fas fa-parking me-2"></i>Seleccionar Parqueadero *
+                                </label>
+                                <select class="form-select form-select-lg" id="select-parqueadero" name="parqueadero_id" required>
+                                    <option value="">-- Seleccione un parqueadero --</option>
+                                    <?php foreach ($parqueaderos as $parq): ?>
+                                        <option value="<?= $parq['id'] ?>" 
+                                                <?= (isset($_POST['parqueadero_id']) && $_POST['parqueadero_id'] == $parq['id']) ? 'selected' : '' ?>
+                                                data-capacidad="<?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?>">
+                                            🏢 <?= htmlspecialchars($parq['nombre']) ?> 
+                                            (<?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?> disponibles)
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                                <div class="form-text" id="info-parqueadero"></div>
+                            </div>
+
+                            <!-- Botones Rápidos de Acción -->
+                            <div class="mb-4">
+                                <label class="form-label fw-bold">
+                                    <i class="fas fa-bolt me-2"></i>Seleccionar Acción *
+                                </label>
+                                <div class="row">
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-entrada btn-rapido w-100" id="btn-entrada" onclick="setMovimiento('entrada', this)">
+                                            <i class="fas fa-sign-in-alt me-2"></i>REGISTRAR ENTRADA
+                                        </button>
+                                    </div>
+                                    <div class="col-md-6">
+                                        <button type="button" class="btn btn-salida btn-rapido w-100" id="btn-salida" onclick="setMovimiento('salida', this)">
+                                            <i class="fas fa-sign-out-alt me-2"></i>REGISTRAR SALIDA
+                                        </button>
+                                    </div>
+                                </div>
+                                <input type="hidden" name="tipo_movimiento" id="tipo_movimiento" value="<?= isset($_POST['tipo_movimiento']) ? htmlspecialchars($_POST['tipo_movimiento']) : '' ?>">
+                            </div>
+
+                            <!-- Búsqueda de Usuario -->
                             <div class="mb-3">
                                 <label for="cedula" class="form-label fw-bold">
-                                    <i class="fas fa-id-card me-2"></i>Número de Cédula
+                                    <i class="fas fa-id-card me-2"></i>Número de Cédula *
                                 </label>
                                 <div class="input-group">
                                     <span class="input-group-text"><i class="fas fa-search"></i></span>
@@ -322,9 +331,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                             <!-- Botón de Confirmación -->
                             <div class="mt-4">
-                                <button type="submit" class="btn btn-primary btn-lg w-100" id="btn-confirmar" disabled>
+                                <button type="submit" class="btn btn-secondary btn-lg w-100" id="btn-confirmar" disabled>
                                     <i class="fas fa-check-circle me-2"></i>
-                                    <span id="btn-text">Seleccione una acción primero</span>
+                                    <span id="btn-text">Complete todos los campos primero</span>
                                 </button>
                             </div>
                         </form>
@@ -349,22 +358,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     <script>
         let movimientoSeleccionado = '';
         let usuarioEncontrado = null;
+        let parqueaderoSeleccionado = false;
 
-        // Actualizar información del parqueadero seleccionado
-        document.getElementById('select-parqueadero').addEventListener('change', function() {
-            const selectedOption = this.options[this.selectedIndex];
-            const infoDiv = document.getElementById('info-parqueadero');
-            
-            if (selectedOption.value && selectedOption.dataset.capacidad) {
-                infoDiv.textContent = `Capacidad: ${selectedOption.dataset.capacidad}`;
-            } else {
-                infoDiv.textContent = '';
-            }
-        });
-
-        function setMovimiento(tipo) {
+        function setMovimiento(tipo, elemento) {
             movimientoSeleccionado = tipo;
             document.getElementById('tipo_movimiento').value = tipo;
+            
+            // Remover selección de ambos botones
+            document.getElementById('btn-entrada').classList.remove('btn-action-selected');
+            document.getElementById('btn-salida').classList.remove('btn-action-selected');
+            
+            // Agregar selección al botón clickeado
+            elemento.classList.add('btn-action-selected');
             
             // Actualizar texto del botón
             const btnText = document.getElementById('btn-text');
@@ -378,17 +383,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 btnConfirmar.className = 'btn btn-danger btn-lg w-100';
             }
             
-            // Habilitar botón si ya hay usuario
-            if (usuarioEncontrado) {
-                btnConfirmar.disabled = false;
-            }
+            // Verificar si podemos habilitar el botón
+            verificarEstadoBoton();
         }
 
         function buscarUsuario() {
             const cedula = document.getElementById('cedula').value.trim();
             const userInfo = document.getElementById('user-info');
             const userDetails = document.getElementById('user-details');
-            const btnConfirmar = document.getElementById('btn-confirmar');
             
             if (!cedula) {
                 alert('Por favor ingrese una cédula');
@@ -437,10 +439,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </div>
                     `;
                     
-                    // Habilitar botón de confirmación si ya se seleccionó movimiento
-                    if (movimientoSeleccionado) {
-                        btnConfirmar.disabled = false;
-                    }
                 } else {
                     usuarioEncontrado = null;
                     userDetails.innerHTML = `
@@ -449,8 +447,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             ${result.message}
                         </div>
                     `;
-                    btnConfirmar.disabled = true;
                 }
+                
+                // Verificar estado del botón después de la búsqueda
+                verificarEstadoBoton();
             })
             .catch(error => {
                 usuarioEncontrado = null;
@@ -460,10 +460,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         Error de conexión: No se pudo buscar el usuario
                     </div>
                 `;
-                btnConfirmar.disabled = true;
+                verificarEstadoBoton();
                 console.error('Error:', error);
             });
         }
+
+        function verificarEstadoBoton() {
+            const btnConfirmar = document.getElementById('btn-confirmar');
+            const parqueadero = document.getElementById('select-parqueadero').value;
+            
+            // Habilitar solo si todos los campos están completos
+            if (parqueadero && movimientoSeleccionado && usuarioEncontrado) {
+                btnConfirmar.disabled = false;
+            } else {
+                btnConfirmar.disabled = true;
+            }
+        }
+
+        // Actualizar información del parqueadero seleccionado
+        document.getElementById('select-parqueadero').addEventListener('change', function() {
+            const selectedOption = this.options[this.selectedIndex];
+            const infoDiv = document.getElementById('info-parqueadero');
+            
+            parqueaderoSeleccionado = this.value !== '';
+            
+            if (selectedOption.value && selectedOption.dataset.capacidad) {
+                infoDiv.textContent = `Capacidad: ${selectedOption.dataset.capacidad}`;
+            } else {
+                infoDiv.textContent = '';
+            }
+            
+            verificarEstadoBoton();
+        });
 
         // Validar formulario antes de enviar
         document.getElementById('registro-form').addEventListener('submit', function(e) {
@@ -501,6 +529,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 e.preventDefault();
                 buscarUsuario();
             }
+        });
+
+        // Verificar cambios en cédula
+        document.getElementById('cedula').addEventListener('input', function() {
+            usuarioEncontrado = null;
+            document.getElementById('user-info').classList.add('hidden');
+            verificarEstadoBoton();
         });
     </script>
 </body>
