@@ -122,8 +122,12 @@ $vehiculos_actuales = $result_vehiculos_actuales->fetch_assoc()['total'];
                     <div class="card-body text-center">
                         <i class="fas fa-clock fa-3x mb-3"></i>
                         <h5 class="card-title">Turno Activo</h5>
-                        <p class="stats-number"><?= date('H:i') ?></p>
-                        <small>Hora actual</small>
+                        <?php
+                        // Crear objeto DateTime con zona horaria de Colombia
+                        $fecha = new DateTime('now', new DateTimeZone('America/Bogota'));
+                        ?>
+                        <p class="stats-number"><?= $fecha->format('H:i') ?></p>
+                        <small>Hora actual Colombia</small>
                     </div>
                 </div>
             </div>
