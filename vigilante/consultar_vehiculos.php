@@ -8,11 +8,8 @@ if (!estaAutenticado() || $_SESSION['rol_nombre'] != 'vigilante') {
     exit();
 }
 
-// Consulta SIMPLIFICADA para evitar errores
+// Consulta para obtener vehículos con sus últimas entradas y salidas
 $query = "SELECT 
-            ra.id as registro_id,
-            ra.tipo_movimiento,
-            ra.fecha_hora,
             u.id as usuario_id,
             u.codigo_universitario,
             u.cedula,
@@ -22,13 +19,42 @@ $query = "SELECT
             v.tipo as tipo_vehiculo,
             v.marca,
             v.color,
-            p.nombre as parqueadero_nombre,
-            p.id as parqueadero_id
-          FROM registros_acceso ra
-          INNER JOIN usuarios_parqueadero u ON ra.usuario_id = u.id
-          INNER JOIN vehiculos v ON ra.vehiculo_id = v.id
-          INNER JOIN parqueaderos p ON ra.parqueadero_id = p.id
-          ORDER BY ra.fecha_hora DESC";
+            entrada.fecha_hora as fecha_entrada,
+            entrada.parqueadero_nombre as parqueadero_entrada,
+            salida.fecha_hora as fecha_salida,
+            salida.parqueadero_nombre as parqueadero_salida,
+            CASE 
+                WHEN salida.fecha_hora IS NULL THEN 'DENTRO'
+                ELSE 'FUERA'
+            END as estado
+          FROM usuarios_parqueadero u
+          INNER JOIN vehiculos v ON u.id = v.usuario_id
+          LEFT JOIN (
+              SELECT ra1.usuario_id, ra1.fecha_hora, p.nombre as parqueadero_nombre
+              FROM registros_acceso ra1
+              INNER JOIN parqueaderos p ON ra1.parqueadero_id = p.id
+              WHERE ra1.tipo_movimiento = 'entrada'
+              AND ra1.fecha_hora = (
+                  SELECT MAX(ra2.fecha_hora)
+                  FROM registros_acceso ra2
+                  WHERE ra2.usuario_id = ra1.usuario_id
+                  AND ra2.tipo_movimiento = 'entrada'
+              )
+          ) entrada ON u.id = entrada.usuario_id
+          LEFT JOIN (
+              SELECT ra1.usuario_id, ra1.fecha_hora, p.nombre as parqueadero_nombre
+              FROM registros_acceso ra1
+              INNER JOIN parqueaderos p ON ra1.parqueadero_id = p.id
+              WHERE ra1.tipo_movimiento = 'salida'
+              AND ra1.fecha_hora = (
+                  SELECT MAX(ra2.fecha_hora)
+                  FROM registros_acceso ra2
+                  WHERE ra2.usuario_id = ra1.usuario_id
+                  AND ra2.tipo_movimiento = 'salida'
+              )
+          ) salida ON u.id = salida.usuario_id
+          WHERE entrada.fecha_hora IS NOT NULL
+          ORDER BY entrada.fecha_hora DESC";
 
 $result = $conn->query($query);
 
@@ -37,9 +63,9 @@ if (!$result) {
     die("Error en la consulta: " . $conn->error);
 }
 
-$registros = [];
+$vehiculos = [];
 while ($row = $result->fetch_assoc()) {
-    $registros[] = $row;
+    $vehiculos[] = $row;
 }
 ?>
 
@@ -66,17 +92,19 @@ while ($row = $result->fetch_assoc()) {
             box-shadow: 0 5px 15px rgba(0,0,0,0.1);
             margin-bottom: 20px;
         }
-        .badge-entrada {
+        .badge-dentro {
             background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
             color: white;
             padding: 8px 12px;
             border-radius: 6px;
+            font-size: 0.9rem;
         }
-        .badge-salida {
-            background: linear-gradient(135deg, #dc3545 0%, #fd7e14 100%);
+        .badge-fuera {
+            background: linear-gradient(135deg, #6c757d 0%, #495057 100%);
             color: white;
             padding: 8px 12px;
             border-radius: 6px;
+            font-size: 0.9rem;
         }
         .table-hover tbody tr:hover {
             background-color: rgba(0, 123, 255, 0.1);
@@ -94,6 +122,20 @@ while ($row = $result->fetch_assoc()) {
             font-weight: bold;
             margin-bottom: 5px;
         }
+        .tiempo-activo {
+            background: #fff3cd;
+            padding: 5px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            font-weight: bold;
+            color: #856404;
+        }
+        .vehiculo-dentro {
+            border-left: 4px solid #28a745;
+        }
+        .vehiculo-fuera {
+            border-left: 4px solid #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -104,8 +146,8 @@ while ($row = $result->fetch_assoc()) {
         <div class="row">
             <div class="col-12">
                 <div class="header-section">
-                    <h1><i class="fas fa-car me-2"></i>Consulta de Vehículos</h1>
-                    <p class="mb-0">Historial completo de entradas y salidas del parqueadero</p>
+                    <h1><i class="fas fa-car me-2"></i>Estado de Vehículos</h1>
+                    <p class="mb-0">Control completo de entradas, salidas y tiempos en parqueadero</p>
                 </div>
             </div>
         </div>
@@ -114,30 +156,30 @@ while ($row = $result->fetch_assoc()) {
         <div class="row">
             <div class="col-md-3">
                 <div class="stats-card">
-                    <div class="stats-number text-primary"><?= count($registros) ?></div>
-                    <div class="text-muted">Total Registros</div>
+                    <div class="stats-number text-primary"><?= count($vehiculos) ?></div>
+                    <div class="text-muted">Total Vehículos</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-number text-success">
-                        <?= count(array_filter($registros, function($r) { return $r['tipo_movimiento'] === 'entrada'; })) ?>
+                        <?= count(array_filter($vehiculos, function($v) { return $v['estado'] === 'DENTRO'; })) ?>
                     </div>
-                    <div class="text-muted">Entradas</div>
+                    <div class="text-muted">En Parqueadero</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-number text-danger">
-                        <?= count(array_filter($registros, function($r) { return $r['tipo_movimiento'] === 'salida'; })) ?>
+                        <?= count(array_filter($vehiculos, function($v) { return $v['estado'] === 'FUERA'; })) ?>
                     </div>
-                    <div class="text-muted">Salidas</div>
+                    <div class="text-muted">Fuera</div>
                 </div>
             </div>
             <div class="col-md-3">
                 <div class="stats-card">
                     <div class="stats-number text-warning">
-                        <?= count(array_unique(array_column($registros, 'placa'))) ?>
+                        <?= count(array_unique(array_column($vehiculos, 'placa'))) ?>
                     </div>
                     <div class="text-muted">Vehículos Únicos</div>
                 </div>
@@ -157,10 +199,10 @@ while ($row = $result->fetch_assoc()) {
                             </div>
                         </div>
                         <div class="col-md-4">
-                            <select id="filter-tipo" class="form-select form-select-lg">
-                                <option value="">Todos los movimientos</option>
-                                <option value="entrada">Solo Entradas</option>
-                                <option value="salida">Solo Salidas</option>
+                            <select id="filter-estado" class="form-select form-select-lg">
+                                <option value="">Todos los estados</option>
+                                <option value="DENTRO">En Parqueadero</option>
+                                <option value="FUERA">Fuera</option>
                             </select>
                         </div>
                     </div>
@@ -173,53 +215,113 @@ while ($row = $result->fetch_assoc()) {
             <div class="col-12">
                 <div class="card">
                     <div class="card-header bg-dark text-white">
-                        <h4 class="mb-0"><i class="fas fa-list me-2"></i>Historial de Movimientos</h4>
+                        <h4 class="mb-0"><i class="fas fa-list me-2"></i>Control de Vehículos</h4>
                     </div>
                     <div class="card-body">
-                        <?php if (count($registros) > 0): ?>
+                        <?php if (count($vehiculos) > 0): ?>
                             <div class="table-responsive">
                                 <table class="table table-hover table-striped">
                                     <thead>
                                         <tr>
-                                            <th>Fecha/Hora</th>
-                                            <th>Movimiento</th>
-                                            <th>Nombre</th>
-                                            <th>Cédula</th>
-                                            <th>Código</th>
+                                            <th>Estado</th>
                                             <th>Vehículo</th>
-                                            <th>Placa</th>
+                                            <th>Propietario</th>
+                                            <th>Entrada</th>
+                                            <th>Salida</th>
+                                            <th>Tiempo Activo</th>
                                             <th>Parqueadero</th>
                                         </tr>
                                     </thead>
                                     <tbody id="tabla-body">
-                                        <?php foreach ($registros as $registro): ?>
-                                            <tr>
+                                        <?php foreach ($vehiculos as $vehiculo): 
+                                            $tiempoActivo = '';
+                                            if ($vehiculo['estado'] === 'DENTRO' && $vehiculo['fecha_entrada']) {
+                                                $entrada = new DateTime($vehiculo['fecha_entrada']);
+                                                $ahora = new DateTime();
+                                                $diferencia = $entrada->diff($ahora);
+                                                
+                                                if ($diferencia->d > 0) {
+                                                    $tiempoActivo = $diferencia->d . 'd ' . $diferencia->h . 'h';
+                                                } else if ($diferencia->h > 0) {
+                                                    $tiempoActivo = $diferencia->h . 'h ' . $diferencia->i . 'm';
+                                                } else {
+                                                    $tiempoActivo = $diferencia->i . 'm';
+                                                }
+                                            }
+                                        ?>
+                                            <tr class="<?= $vehiculo['estado'] === 'DENTRO' ? 'vehiculo-dentro' : 'vehiculo-fuera' ?>">
                                                 <td>
-                                                    <small class="text-muted">
-                                                        <?= date('d/m/Y H:i:s', strtotime($registro['fecha_hora'])) ?>
-                                                    </small>
-                                                </td>
-                                                <td>
-                                                    <span class="badge <?= $registro['tipo_movimiento'] === 'entrada' ? 'badge-entrada' : 'badge-salida' ?>">
-                                                        <?= $registro['tipo_movimiento'] === 'entrada' ? 'ENTRADA' : 'SALIDA' ?>
+                                                    <span class="badge <?= $vehiculo['estado'] === 'DENTRO' ? 'badge-dentro' : 'badge-fuera' ?>">
+                                                        <?= $vehiculo['estado'] === 'DENTRO' ? '🟢 DENTRO' : '⚫ FUERA' ?>
                                                     </span>
                                                 </td>
                                                 <td>
-                                                    <strong><?= htmlspecialchars($registro['nombre_completo']) ?></strong>
-                                                    <br><small class="text-muted"><?= htmlspecialchars($registro['tipo_usuario']) ?></small>
+                                                    <strong><?= htmlspecialchars($vehiculo['placa']) ?></strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        <?= htmlspecialchars($vehiculo['tipo_vehiculo']) ?>
+                                                        <?php if ($vehiculo['marca']): ?>
+                                                            • <?= htmlspecialchars($vehiculo['marca']) ?>
+                                                        <?php endif; ?>
+                                                        <?php if ($vehiculo['color']): ?>
+                                                            • <?= htmlspecialchars($vehiculo['color']) ?>
+                                                        <?php endif; ?>
+                                                    </small>
                                                 </td>
-                                                <td><?= htmlspecialchars($registro['cedula']) ?></td>
-                                                <td><?= htmlspecialchars($registro['codigo_universitario']) ?></td>
                                                 <td>
-                                                    <?= htmlspecialchars($registro['tipo_vehiculo']) ?>
-                                                    <?php if ($registro['marca']): ?>
-                                                        <br><small class="text-muted"><?= htmlspecialchars($registro['marca']) ?></small>
+                                                    <strong><?= htmlspecialchars($vehiculo['nombre_completo']) ?></strong>
+                                                    <br>
+                                                    <small class="text-muted">
+                                                        <?= htmlspecialchars($vehiculo['cedula']) ?>
+                                                        <br>
+                                                        <?= htmlspecialchars($vehiculo['codigo_universitario']) ?>
+                                                    </small>
+                                                </td>
+                                                <td>
+                                                    <?php if ($vehiculo['fecha_entrada']): ?>
+                                                        <small class="text-success">
+                                                            <i class="fas fa-sign-in-alt"></i>
+                                                            <?= date('d/m H:i', strtotime($vehiculo['fecha_entrada'])) ?>
+                                                        </small>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <?= htmlspecialchars($vehiculo['parqueadero_entrada']) ?>
+                                                        </small>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">-</span>
                                                     <?php endif; ?>
                                                 </td>
                                                 <td>
-                                                    <span class="badge bg-dark"><?= htmlspecialchars($registro['placa']) ?></span>
+                                                    <?php if ($vehiculo['fecha_salida']): ?>
+                                                        <small class="text-danger">
+                                                            <i class="fas fa-sign-out-alt"></i>
+                                                            <?= date('d/m H:i', strtotime($vehiculo['fecha_salida'])) ?>
+                                                        </small>
+                                                        <br>
+                                                        <small class="text-muted">
+                                                            <?= htmlspecialchars($vehiculo['parqueadero_salida']) ?>
+                                                        </small>
+                                                    <?php else: ?>
+                                                        <span class="text-warning">
+                                                            <i class="fas fa-clock"></i>
+                                                            En parqueadero
+                                                        </span>
+                                                    <?php endif; ?>
                                                 </td>
-                                                <td><?= htmlspecialchars($registro['parqueadero_nombre']) ?></td>
+                                                <td>
+                                                    <?php if ($tiempoActivo): ?>
+                                                        <span class="tiempo-activo">
+                                                            ⏱️ <?= $tiempoActivo ?>
+                                                        </span>
+                                                    <?php else: ?>
+                                                        <span class="text-muted">-</span>
+                                                    <?php endif; ?>
+                                                </td>
+                                                <td>
+                                                    <small class="text-primary">
+                                                        <?= htmlspecialchars($vehiculo['parqueadero_entrada']) ?>
+                                                    </small>
+                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -228,8 +330,8 @@ while ($row = $result->fetch_assoc()) {
                         <?php else: ?>
                             <div class="text-center py-5">
                                 <i class="fas fa-car fa-4x text-muted mb-3"></i>
-                                <h4 class="text-muted">No hay registros</h4>
-                                <p class="text-muted">No se encontraron movimientos en el sistema</p>
+                                <h4 class="text-muted">No hay vehículos registrados</h4>
+                                <p class="text-muted">No se encontraron vehículos en el sistema</p>
                             </div>
                         <?php endif; ?>
                     </div>
@@ -243,12 +345,12 @@ while ($row = $result->fetch_assoc()) {
         // Búsqueda simple en JavaScript puro
         document.getElementById('search-input').addEventListener('keyup', function() {
             const searchText = this.value.toLowerCase();
-            const filterTipo = document.getElementById('filter-tipo').value;
+            const filterEstado = document.getElementById('filter-estado').value;
             const rows = document.querySelectorAll('#tabla-body tr');
             
             rows.forEach(row => {
                 const rowText = row.textContent.toLowerCase();
-                const tipoMovimiento = row.querySelector('.badge').textContent.trim().toLowerCase();
+                const estado = row.querySelector('.badge').textContent.toLowerCase();
                 
                 let showRow = true;
                 
@@ -257,10 +359,10 @@ while ($row = $result->fetch_assoc()) {
                     showRow = false;
                 }
                 
-                // Aplicar filtro por tipo
-                if (filterTipo) {
-                    const tipoBuscado = filterTipo === 'entrada' ? 'entrada' : 'salida';
-                    if (tipoMovimiento !== tipoBuscado) {
+                // Aplicar filtro por estado
+                if (filterEstado) {
+                    const estadoBuscado = filterEstado.toLowerCase();
+                    if (!estado.includes(estadoBuscado)) {
                         showRow = false;
                     }
                 }
@@ -269,9 +371,8 @@ while ($row = $result->fetch_assoc()) {
             });
         });
 
-        // Filtro por tipo
-        document.getElementById('filter-tipo').addEventListener('change', function() {
-            // Disparar el evento de búsqueda para aplicar ambos filtros
+        // Filtro por estado
+        document.getElementById('filter-estado').addEventListener('change', function() {
             document.getElementById('search-input').dispatchEvent(new Event('keyup'));
         });
     </script>
