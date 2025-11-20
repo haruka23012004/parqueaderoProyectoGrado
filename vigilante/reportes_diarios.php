@@ -120,17 +120,17 @@ try {
     $stmt_activos->execute();
     $estadisticas['usuarios_activos'] = $stmt_activos->get_result()->fetch_all(MYSQLI_ASSOC);
 
-    // 7. VIGILANTES MÁS ACTIVOS
+    // 7. VIGILANTES MÁS ACTIVOS - CORREGIDO
     $query_vigilantes = "SELECT 
-                          e.nombre as vigilante_nombre,
+                          u.nombre_completo as vigilante_nombre,
                           COUNT(*) as registros_realizados,
                           SUM(CASE WHEN ra.tipo_movimiento = 'entrada' THEN 1 ELSE 0 END) as entradas_registradas,
                           SUM(CASE WHEN ra.tipo_movimiento = 'salida' THEN 1 ELSE 0 END) as salidas_registradas
                          FROM registros_acceso ra
-                         INNER JOIN empleados e ON ra.empleado_id = e.id
+                         INNER JOIN usuarios_parqueadero u ON ra.empleado_id = u.id
                          WHERE DATE(ra.fecha_hora) = ?
                          AND ra.metodo_acceso = 'manual'
-                         GROUP BY e.id, e.nombre
+                         GROUP BY u.id, u.nombre_completo
                          ORDER BY registros_realizados DESC";
     
     $stmt_vigilantes = $conn->prepare($query_vigilantes);
@@ -187,6 +187,12 @@ function calcularPorcentajeCambio($actual, $anterior) {
 function formatearHora($hora) {
     return str_pad($hora, 2, '0', STR_PAD_LEFT) . ':00';
 }
+
+// Función para obtener nombre del día
+function obtenerNombreDia($fecha) {
+    $dias = ['Domingo', 'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'];
+    return $dias[date('w', strtotime($fecha))];
+}
 ?>
 
 <!DOCTYPE html>
@@ -194,101 +200,128 @@ function formatearHora($hora) {
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Reportes Diarios - Sistema Parqueadero</title>
+    <title>Reporte Diario - Sistema de Parqueadero</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <style>
+        @media print {
+            .no-print { display: none !important; }
+            .card { border: 1px solid #ddd !important; box-shadow: none !important; }
+            .container-fluid { max-width: 100% !important; }
+            .print-break { page-break-after: always; }
+            .print-mt { margin-top: 20px; }
+        }
+        
         .header-reporte {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            border-radius: 15px;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            border-radius: 10px;
             color: white;
-            padding: 30px;
-            margin-bottom: 30px;
+            padding: 25px;
+            margin-bottom: 25px;
         }
         .card-stat {
             border-radius: 10px;
             border: none;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-            transition: transform 0.3s ease;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            transition: all 0.3s ease;
             height: 100%;
         }
         .card-stat:hover {
-            transform: translateY(-5px);
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.15);
         }
         .stat-number {
-            font-size: 2.5rem;
+            font-size: 2rem;
             font-weight: bold;
             margin-bottom: 0;
         }
-        .stat-trend {
-            font-size: 0.9rem;
-            font-weight: bold;
-        }
-        .trend-up {
-            color: #28a745;
-        }
-        .trend-down {
-            color: #dc3545;
-        }
-        .trend-neutral {
-            color: #6c757d;
-        }
         .section-title {
-            border-left: 4px solid #667eea;
-            padding-left: 15px;
-            margin: 30px 0 20px 0;
-            color: #495057;
+            border-bottom: 2px solid #1e3c72;
+            padding-bottom: 10px;
+            margin: 25px 0 15px 0;
+            color: #1e3c72;
+            font-weight: 600;
         }
         .chart-container {
             background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
             margin-bottom: 20px;
-            height: 300px;
+            height: 280px;
         }
-        .badge-estudiante { background: linear-gradient(135deg, #28a745, #20c997); }
-        .badge-profesor { background: linear-gradient(135deg, #007bff, #0056b3); }
-        .badge-administrativo { background: linear-gradient(135deg, #6f42c1, #5a2d9c); }
-        .badge-externo { background: linear-gradient(135deg, #fd7e14, #e55a00); }
-        .table-hover tbody tr:hover {
-            background-color: rgba(102, 126, 234, 0.1);
+        .table-custom th {
+            background-color: #1e3c72;
+            color: white;
+            border: none;
         }
+        .badge-estudiante { background-color: #28a745; }
+        .badge-profesor { background-color: #007bff; }
+        .badge-administrativo { background-color: #6f42c1; }
+        .badge-externo { background-color: #fd7e14; }
         .fecha-selector {
-            background: white;
-            border-radius: 10px;
-            padding: 20px;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+            background: #f8f9fa;
+            border-radius: 8px;
+            padding: 15px;
             margin-bottom: 20px;
+            border: 1px solid #dee2e6;
         }
-        .print-btn {
-            position: fixed;
-            bottom: 30px;
-            right: 30px;
-            z-index: 1000;
-            border-radius: 50px;
-            padding: 15px 25px;
-            box-shadow: 0 5px 15px rgba(0,0,0,0.3);
+        .print-header {
+            display: none;
+        }
+        @media print {
+            .print-header {
+                display: block;
+                text-align: center;
+                margin-bottom: 20px;
+                padding-bottom: 15px;
+                border-bottom: 2px solid #1e3c72;
+            }
+            .header-reporte { display: none; }
+            .fecha-selector { display: none; }
+        }
+        .info-box {
+            background: #e8f4fd;
+            border-left: 4px solid #1e3c72;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-radius: 0 8px 8px 0;
+        }
+        .summary-card {
+            background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 15px;
         }
     </style>
 </head>
 <body>
     <?php include '../navbar.php'; ?>
     
-    <div class="container-fluid mt-4">
+    <div class="container-fluid mt-3">
+
+        <!-- Encabezado para Impresión -->
+        <div class="print-header">
+            <h2>Reporte Diario - Sistema de Parqueadero</h2>
+            <h4><?= date('d/m/Y', strtotime($fecha_reporte)) ?> - <?= obtenerNombreDia($fecha_reporte) ?></h4>
+            <p>Generado el: <?= date('d/m/Y H:i:s') ?></p>
+            <hr>
+        </div>
+
         <!-- Encabezado del Reporte -->
         <div class="row">
             <div class="col-12">
                 <div class="header-reporte">
                     <div class="row align-items-center">
                         <div class="col-md-8">
-                            <h1><i class="fas fa-chart-line me-2"></i>Reportes Diarios del Sistema</h1>
-                            <p class="mb-0">Estadísticas completas y análisis de movimientos del parqueadero</p>
+                            <h2><i class="fas fa-chart-bar me-2"></i>Reporte Diario del Sistema</h2>
+                            <p class="mb-0">Resumen completo de actividad del parqueadero</p>
                         </div>
                         <div class="col-md-4 text-end">
-                            <h3><?= date('d/m/Y', strtotime($fecha_reporte)) ?></h3>
-                            <small>Reporte generado: <?= date('H:i:s') ?></small>
+                            <h4><?= date('d/m/Y', strtotime($fecha_reporte)) ?></h4>
+                            <h5><?= obtenerNombreDia($fecha_reporte) ?></h5>
+                            <small>Generado: <?= date('H:i:s') ?></small>
                         </div>
                     </div>
                 </div>
@@ -296,38 +329,37 @@ function formatearHora($hora) {
         </div>
 
         <!-- Selector de Fecha -->
-        <div class="row">
+        <div class="row no-print">
             <div class="col-12">
                 <div class="fecha-selector">
-                    <form method="GET" class="row align-items-center">
-                        <div class="col-md-4">
-                            <label for="fecha" class="form-label fw-bold">Seleccionar Fecha del Reporte:</label>
-                            <input type="date" class="form-control form-control-lg" id="fecha" name="fecha" 
+                    <div class="row align-items-center">
+                        <div class="col-md-6">
+                            <label for="fecha" class="form-label fw-bold">Seleccionar Fecha:</label>
+                            <input type="date" class="form-control" id="fecha" name="fecha" 
                                    value="<?= $fecha_reporte ?>" max="<?= date('Y-m-d') ?>">
                         </div>
-                        <div class="col-md-4">
-                            <button type="submit" class="btn btn-primary btn-lg mt-3">
-                                <i class="fas fa-sync-alt me-2"></i>Generar Reporte
-                            </button>
-                        </div>
-                        <div class="col-md-4 text-end">
-                            <div class="btn-group mt-3">
-                                <a href="?fecha=<?= date('Y-m-d', strtotime($fecha_reporte . ' -1 day')) ?>" 
-                                   class="btn btn-outline-primary">
-                                    <i class="fas fa-chevron-left me-1"></i>Día Anterior
-                                </a>
-                                <a href="?fecha=<?= date('Y-m-d') ?>" class="btn btn-outline-secondary">
+                        <div class="col-md-6">
+                            <div class="d-grid gap-2 d-md-flex justify-content-md-end">
+                                <button type="button" onclick="cambiarFecha('<?= date('Y-m-d', strtotime($fecha_reporte . ' -1 day')) ?>')" 
+                                        class="btn btn-outline-primary">
+                                    <i class="fas fa-chevron-left me-1"></i>Ayer
+                                </button>
+                                <button type="button" onclick="cambiarFecha('<?= date('Y-m-d') ?>')" 
+                                        class="btn btn-primary">
                                     Hoy
-                                </a>
+                                </button>
                                 <?php if ($fecha_reporte < date('Y-m-d')): ?>
-                                <a href="?fecha=<?= date('Y-m-d', strtotime($fecha_reporte . ' +1 day')) ?>" 
-                                   class="btn btn-outline-primary">
-                                    Día Siguiente<i class="fas fa-chevron-right ms-1"></i>
-                                </a>
+                                <button type="button" onclick="cambiarFecha('<?= date('Y-m-d', strtotime($fecha_reporte . ' +1 day')) ?>')" 
+                                        class="btn btn-outline-primary">
+                                    Mañana<i class="fas fa-chevron-right ms-1"></i>
+                                </button>
                                 <?php endif; ?>
+                                <button onclick="window.print()" class="btn btn-success">
+                                    <i class="fas fa-print me-1"></i>Imprimir
+                                </button>
                             </div>
                         </div>
-                    </form>
+                    </div>
                 </div>
             </div>
         </div>
@@ -338,74 +370,63 @@ function formatearHora($hora) {
             </div>
         <?php endif; ?>
 
+        <!-- RESUMEN EJECUTIVO -->
+        <div class="row">
+            <div class="col-12">
+                <div class="info-box">
+                    <h5><i class="fas fa-info-circle me-2"></i>Resumen Ejecutivo</h5>
+                    <p class="mb-0">
+                        En la fecha <?= date('d/m/Y', strtotime($fecha_reporte)) ?> se registraron 
+                        <strong><?= $estadisticas['general']['total_movimientos'] ?? 0 ?></strong> movimientos en total, 
+                        con <strong><?= $estadisticas['general']['total_entradas'] ?? 0 ?></strong> entradas y 
+                        <strong><?= $estadisticas['general']['total_salidas'] ?? 0 ?></strong> salidas. 
+                        <?= $estadisticas['general']['usuarios_unicos'] ?? 0 ?> usuarios únicos utilizaron el servicio.
+                    </p>
+                </div>
+            </div>
+        </div>
+
         <!-- ESTADÍSTICAS PRINCIPALES -->
         <div class="row">
-            <!-- Total Movimientos -->
-            <div class="col-md-3 mb-4">
+            <div class="col-md-3 mb-3">
                 <div class="card card-stat border-primary">
                     <div class="card-body text-center">
-                        <i class="fas fa-exchange-alt fa-3x text-primary mb-3"></i>
-                        <h3 class="stat-number text-primary">
-                            <?= $estadisticas['general']['total_movimientos'] ?? 0 ?>
-                        </h3>
+                        <i class="fas fa-exchange-alt fa-2x text-primary mb-2"></i>
+                        <h3 class="stat-number text-primary"><?= $estadisticas['general']['total_movimientos'] ?? 0 ?></h3>
                         <h6 class="text-muted">Total Movimientos</h6>
-                        <?php if ($estadisticas['comparativa']): ?>
-                            <?php 
-                            $cambio = calcularPorcentajeCambio(
-                                $estadisticas['general']['total_movimientos'] ?? 0,
-                                $estadisticas['comparativa']['total_ayer'] ?? 0
-                            );
-                            ?>
-                            <div class="stat-trend <?= $cambio > 0 ? 'trend-up' : ($cambio < 0 ? 'trend-down' : 'trend-neutral') ?>">
-                                <i class="fas fa-arrow-<?= $cambio > 0 ? 'up' : ($cambio < 0 ? 'down' : 'right') ?> me-1"></i>
-                                <?= abs($cambio) ?>% vs ayer
-                            </div>
-                        <?php endif; ?>
                     </div>
                 </div>
             </div>
-
-            <!-- Entradas -->
-            <div class="col-md-3 mb-4">
+            <div class="col-md-3 mb-3">
                 <div class="card card-stat border-success">
                     <div class="card-body text-center">
-                        <i class="fas fa-sign-in-alt fa-3x text-success mb-3"></i>
-                        <h3 class="stat-number text-success">
-                            <?= $estadisticas['general']['total_entradas'] ?? 0 ?>
-                        </h3>
-                        <h6 class="text-muted">Entradas Registradas</h6>
+                        <i class="fas fa-sign-in-alt fa-2x text-success mb-2"></i>
+                        <h3 class="stat-number text-success"><?= $estadisticas['general']['total_entradas'] ?? 0 ?></h3>
+                        <h6 class="text-muted">Entradas</h6>
                     </div>
                 </div>
             </div>
-
-            <!-- Salidas -->
-            <div class="col-md-3 mb-4">
+            <div class="col-md-3 mb-3">
                 <div class="card card-stat border-danger">
                     <div class="card-body text-center">
-                        <i class="fas fa-sign-out-alt fa-3x text-danger mb-3"></i>
-                        <h3 class="stat-number text-danger">
-                            <?= $estadisticas['general']['total_salidas'] ?? 0 ?>
-                        </h3>
-                        <h6 class="text-muted">Salidas Registradas</h6>
+                        <i class="fas fa-sign-out-alt fa-2x text-danger mb-2"></i>
+                        <h3 class="stat-number text-danger"><?= $estadisticas['general']['total_salidas'] ?? 0 ?></h3>
+                        <h6 class="text-muted">Salidas</h6>
                     </div>
                 </div>
             </div>
-
-            <!-- Usuarios Únicos -->
-            <div class="col-md-3 mb-4">
+            <div class="col-md-3 mb-3">
                 <div class="card card-stat border-warning">
                     <div class="card-body text-center">
-                        <i class="fas fa-users fa-3x text-warning mb-3"></i>
-                        <h3 class="stat-number text-warning">
-                            <?= $estadisticas['general']['usuarios_unicos'] ?? 0 ?>
-                        </h3>
+                        <i class="fas fa-users fa-2x text-warning mb-2"></i>
+                        <h3 class="stat-number text-warning"><?= $estadisticas['general']['usuarios_unicos'] ?? 0 ?></h3>
                         <h6 class="text-muted">Usuarios Únicos</h6>
                     </div>
                 </div>
             </div>
         </div>
 
-        <!-- GRÁFICOS Y ESTADÍSTICAS DETALLADAS -->
+        <!-- PRIMERA SECCIÓN: DISTRIBUCIÓN -->
         <div class="row">
             <!-- Distribución por Tipo de Usuario -->
             <div class="col-md-6">
@@ -424,291 +445,218 @@ function formatearHora($hora) {
             </div>
         </div>
 
-        <!-- TABLAS DETALLADAS -->
-        
-        <!-- Por Tipo de Usuario -->
+        <!-- SEGUNDA SECCIÓN: DETALLES POR TIPO -->
+        <div class="print-break"></div>
+        <h4 class="section-title print-mt">Detalles por Tipo de Usuario</h4>
+        <div class="row">
+            <?php foreach ($estadisticas['por_tipo_usuario'] as $tipo): ?>
+            <div class="col-md-3 mb-3">
+                <div class="summary-card">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <span class="badge badge-<?= strtolower($tipo['tipo']) ?> text-white">
+                            <?= ucfirst($tipo['tipo']) ?>
+                        </span>
+                        <strong><?= $tipo['total'] ?></strong>
+                    </div>
+                    <div class="mt-2">
+                        <small class="text-success">
+                            <i class="fas fa-sign-in-alt"></i> <?= $tipo['entradas'] ?> entradas
+                        </small><br>
+                        <small class="text-danger">
+                            <i class="fas fa-sign-out-alt"></i> <?= $tipo['salidas'] ?> salidas
+                        </small>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- TERCERA SECCIÓN: PARQUEADEROS -->
+        <h4 class="section-title">Actividad por Parqueadero</h4>
+        <div class="row">
+            <?php foreach ($estadisticas['por_parqueadero'] as $parq): ?>
+            <div class="col-md-4 mb-3">
+                <div class="card card-stat">
+                    <div class="card-body">
+                        <h6 class="card-title"><?= $parq['nombre'] ?></h6>
+                        <div class="row text-center">
+                            <div class="col-4">
+                                <small class="text-muted">Total</small>
+                                <div class="fw-bold"><?= $parq['total_movimientos'] ?></div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Entradas</small>
+                                <div class="fw-bold text-success"><?= $parq['entradas'] ?></div>
+                            </div>
+                            <div class="col-4">
+                                <small class="text-muted">Salidas</small>
+                                <div class="fw-bold text-danger"><?= $parq['salidas'] ?></div>
+                            </div>
+                        </div>
+                        <div class="mt-2">
+                            <small class="text-muted">Capacidad: <?= $parq['capacidad_actual'] ?>/<?= $parq['capacidad_total'] ?></small>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <?php endforeach; ?>
+        </div>
+
+        <!-- CUARTA SECCIÓN: USUARIOS ACTIVOS -->
+        <div class="print-break"></div>
+        <h4 class="section-title print-mt">Top 10 Usuarios Más Activos</h4>
         <div class="row">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-primary text-white">
-                        <h5 class="mb-0"><i class="fas fa-user-tag me-2"></i>Estadísticas por Tipo de Usuario</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Tipo de Usuario</th>
-                                        <th>Total Movimientos</th>
-                                        <th>Entradas</th>
-                                        <th>Salidas</th>
-                                        <th>Porcentaje</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($estadisticas['por_tipo_usuario'] as $tipo): ?>
-                                        <tr>
-                                            <td>
-                                                <span class="badge badge-<?= strtolower($tipo['tipo']) ?> text-white">
-                                                    <?= ucfirst($tipo['tipo']) ?>
-                                                </span>
-                                            </td>
-                                            <td><strong><?= $tipo['total'] ?></strong></td>
-                                            <td class="text-success"><?= $tipo['entradas'] ?></td>
-                                            <td class="text-danger"><?= $tipo['salidas'] ?></td>
-                                            <td>
-                                                <?= round(($tipo['total'] / $estadisticas['general']['total_movimientos']) * 100, 1) ?>%
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-custom">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Usuario</th>
+                                <th>Tipo</th>
+                                <th>Total</th>
+                                <th>Entradas</th>
+                                <th>Salidas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($estadisticas['usuarios_activos'] as $index => $usuario): ?>
+                            <tr>
+                                <td class="fw-bold"><?= $index + 1 ?></td>
+                                <td><?= $usuario['nombre_completo'] ?></td>
+                                <td>
+                                    <span class="badge badge-<?= strtolower($usuario['tipo']) ?> text-white">
+                                        <?= ucfirst($usuario['tipo']) ?>
+                                    </span>
+                                </td>
+                                <td class="fw-bold"><?= $usuario['total_movimientos'] ?></td>
+                                <td class="text-success"><?= $usuario['entradas'] ?></td>
+                                <td class="text-danger"><?= $usuario['salidas'] ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Por Parqueadero -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-success text-white">
-                        <h5 class="mb-0"><i class="fas fa-parking me-2"></i>Actividad por Parqueadero</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Parqueadero</th>
-                                        <th>Total Movimientos</th>
-                                        <th>Entradas</th>
-                                        <th>Salidas</th>
-                                        <th>Capacidad</th>
-                                        <th>Ocupación Máxima</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($estadisticas['por_parqueadero'] as $parq): ?>
-                                        <tr>
-                                            <td><strong><?= $parq['nombre'] ?></strong></td>
-                                            <td><?= $parq['total_movimientos'] ?></td>
-                                            <td class="text-success"><?= $parq['entradas'] ?></td>
-                                            <td class="text-danger"><?= $parq['salidas'] ?></td>
-                                            <td>
-                                                <small><?= $parq['capacidad_actual'] ?> / <?= $parq['capacidad_total'] ?></small>
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                $ocupacion_max = $parq['entradas'] - $parq['salidas'];
-                                                $porcentaje = round(($ocupacion_max / $parq['capacidad_total']) * 100, 1);
-                                                ?>
-                                                <div class="progress" style="height: 20px;">
-                                                    <div class="progress-bar <?= $porcentaje > 80 ? 'bg-danger' : ($porcentaje > 60 ? 'bg-warning' : 'bg-success') ?>" 
-                                                         role="progressbar" style="width: <?= $porcentaje ?>%;">
-                                                        <?= $porcentaje ?>%
-                                                    </div>
-                                                </div>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+        <!-- QUINTA SECCIÓN: VIGILANTES Y HORAS PICO -->
+        <div class="row">
+            <!-- Vigilantes -->
+            <div class="col-md-6">
+                <h5 class="section-title">Registros Manuales por Vigilante</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Vigilante</th>
+                                <th>Registros</th>
+                                <th>Entradas</th>
+                                <th>Salidas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($estadisticas['vigilantes'] as $vigilante): ?>
+                            <tr>
+                                <td><?= $vigilante['vigilante_nombre'] ?></td>
+                                <td class="fw-bold"><?= $vigilante['registros_realizados'] ?></td>
+                                <td class="text-success"><?= $vigilante['entradas_registradas'] ?></td>
+                                <td class="text-danger"><?= $vigilante['salidas_registradas'] ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                            <?php if (empty($estadisticas['vigilantes'])): ?>
+                            <tr>
+                                <td colspan="4" class="text-center text-muted py-2">
+                                    No hubo registros manuales este día
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Horas Pico -->
+            <div class="col-md-6">
+                <h5 class="section-title">Horas con Más Entradas</h5>
+                <div class="table-responsive">
+                    <table class="table table-bordered">
+                        <thead>
+                            <tr>
+                                <th>Hora</th>
+                                <th>Entradas</th>
+                                <th>% del Día</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($estadisticas['horas_pico'] as $hora): ?>
+                            <tr>
+                                <td class="fw-bold"><?= formatearHora($hora['hora']) ?></td>
+                                <td><?= $hora['total_entradas'] ?></td>
+                                <td>
+                                    <?= round(($hora['total_entradas'] / $estadisticas['general']['total_entradas']) * 100, 1) ?>%
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
-        <!-- Usuarios Más Activos -->
-        <div class="row mt-4">
+        <!-- SEXTA SECCIÓN: VEHÍCULOS FRECUENTES -->
+        <div class="print-break"></div>
+        <h4 class="section-title print-mt">Vehículos Más Frecuentes</h4>
+        <div class="row">
             <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-warning text-dark">
-                        <h5 class="mb-0"><i class="fas fa-trophy me-2"></i>Top 10 Usuarios Más Activos</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>#</th>
-                                        <th>Usuario</th>
-                                        <th>Cédula</th>
-                                        <th>Tipo</th>
-                                        <th>Total Movimientos</th>
-                                        <th>Entradas</th>
-                                        <th>Salidas</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($estadisticas['usuarios_activos'] as $index => $usuario): ?>
-                                        <tr>
-                                            <td><strong><?= $index + 1 ?></strong></td>
-                                            <td><?= $usuario['nombre_completo'] ?></td>
-                                            <td><code><?= $usuario['cedula'] ?></code></td>
-                                            <td>
-                                                <span class="badge badge-<?= strtolower($usuario['tipo']) ?> text-white">
-                                                    <?= ucfirst($usuario['tipo']) ?>
-                                                </span>
-                                            </td>
-                                            <td><strong><?= $usuario['total_movimientos'] ?></strong></td>
-                                            <td class="text-success"><?= $usuario['entradas'] ?></td>
-                                            <td class="text-danger"><?= $usuario['salidas'] ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Vehículos Más Frecuentes -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-info text-white">
-                        <h5 class="mb-0"><i class="fas fa-car me-2"></i>Vehículos Más Frecuentes</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Placa</th>
-                                        <th>Vehículo</th>
-                                        <th>Propietario</th>
-                                        <th>Tipo Usuario</th>
-                                        <th>Total Visitas</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($estadisticas['vehiculos_frecuentes'] as $vehiculo): ?>
-                                        <tr>
-                                            <td><strong><?= $vehiculo['placa'] ?></strong></td>
-                                            <td>
-                                                <?= $vehiculo['tipo_vehiculo'] ?>
-                                                <?php if ($vehiculo['marca']): ?> • <?= $vehiculo['marca'] ?><?php endif; ?>
-                                                <?php if ($vehiculo['color']): ?> • <?= $vehiculo['color'] ?><?php endif; ?>
-                                            </td>
-                                            <td><?= $vehiculo['propietario'] ?></td>
-                                            <td>
-                                                <span class="badge badge-<?= strtolower($vehiculo['tipo_usuario']) ?> text-white">
-                                                    <?= ucfirst($vehiculo['tipo_usuario']) ?>
-                                                </span>
-                                            </td>
-                                            <td><strong><?= $vehiculo['total_visitas'] ?></strong></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Vigilantes -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-secondary text-white">
-                        <h5 class="mb-0"><i class="fas fa-user-shield me-2"></i>Actividad de Vigilantes</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Vigilante</th>
-                                        <th>Registros Manuales</th>
-                                        <th>Entradas Registradas</th>
-                                        <th>Salidas Registradas</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($estadisticas['vigilantes'] as $vigilante): ?>
-                                        <tr>
-                                            <td><strong><?= $vigilante['vigilante_nombre'] ?></strong></td>
-                                            <td><?= $vigilante['registros_realizados'] ?></td>
-                                            <td class="text-success"><?= $vigilante['entradas_registradas'] ?></td>
-                                            <td class="text-danger"><?= $vigilante['salidas_registradas'] ?></td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                    <?php if (empty($estadisticas['vigilantes'])): ?>
-                                        <tr>
-                                            <td colspan="4" class="text-center text-muted py-3">
-                                                <i class="fas fa-info-circle me-2"></i>
-                                                No hubo registros manuales este día
-                                            </td>
-                                        </tr>
-                                    <?php endif; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <!-- Horas Pico -->
-        <div class="row mt-4">
-            <div class="col-12">
-                <div class="card">
-                    <div class="card-header bg-dark text-white">
-                        <h5 class="mb-0"><i class="fas fa-clock me-2"></i>Horas Pico de Entradas</h5>
-                    </div>
-                    <div class="card-body">
-                        <div class="table-responsive">
-                            <table class="table table-hover">
-                                <thead>
-                                    <tr>
-                                        <th>Hora</th>
-                                        <th>Total Entradas</th>
-                                        <th>Porcentaje del Día</th>
-                                        <th>Intensidad</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php foreach ($estadisticas['horas_pico'] as $hora): ?>
-                                        <tr>
-                                            <td><strong><?= formatearHora($hora['hora']) ?></strong></td>
-                                            <td><?= $hora['total_entradas'] ?></td>
-                                            <td>
-                                                <?= round(($hora['total_entradas'] / $estadisticas['general']['total_entradas']) * 100, 1) ?>%
-                                            </td>
-                                            <td>
-                                                <?php 
-                                                $intensidad = ($hora['total_entradas'] / $estadisticas['general']['total_entradas']) * 100;
-                                                if ($intensidad > 15): ?>
-                                                    <span class="badge bg-danger">ALTA</span>
-                                                <?php elseif ($intensidad > 8): ?>
-                                                    <span class="badge bg-warning">MEDIA</span>
-                                                <?php else: ?>
-                                                    <span class="badge bg-success">BAJA</span>
-                                                <?php endif; ?>
-                                            </td>
-                                        </tr>
-                                    <?php endforeach; ?>
-                                </tbody>
-                            </table>
-                        </div>
-                    </div>
+                <div class="table-responsive">
+                    <table class="table table-bordered table-custom">
+                        <thead>
+                            <tr>
+                                <th>Placa</th>
+                                <th>Vehículo</th>
+                                <th>Propietario</th>
+                                <th>Tipo</th>
+                                <th>Visitas</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($estadisticas['vehiculos_frecuentes'] as $vehiculo): ?>
+                            <tr>
+                                <td class="fw-bold"><?= $vehiculo['placa'] ?></td>
+                                <td>
+                                    <?= $vehiculo['tipo_vehiculo'] ?>
+                                    <?php if ($vehiculo['marca']): ?> - <?= $vehiculo['marca'] ?><?php endif; ?>
+                                    <?php if ($vehiculo['color']): ?> (<?= $vehiculo['color'] ?>)<?php endif; ?>
+                                </td>
+                                <td><?= $vehiculo['propietario'] ?></td>
+                                <td>
+                                    <span class="badge badge-<?= strtolower($vehiculo['tipo_usuario']) ?> text-white">
+                                        <?= ucfirst($vehiculo['tipo_usuario']) ?>
+                                    </span>
+                                </td>
+                                <td class="fw-bold"><?= $vehiculo['total_visitas'] ?></td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
 
     </div>
 
-    <!-- Botón de Impresión -->
-    <button onclick="window.print()" class="btn btn-primary print-btn">
-        <i class="fas fa-print me-2"></i>Imprimir Reporte
-    </button>
-
     <script>
+        // Función para cambiar fecha
+        function cambiarFecha(fecha) {
+            window.location.href = '?fecha=' + fecha;
+        }
+
+        // Event listener para cambio de fecha
+        document.getElementById('fecha').addEventListener('change', function() {
+            cambiarFecha(this.value);
+        });
+
         // Gráfico de Tipo de Usuario
         const ctxTipoUsuario = document.getElementById('chartTipoUsuario').getContext('2d');
         new Chart(ctxTipoUsuario, {
@@ -725,17 +673,23 @@ function formatearHora($hora) {
                             <?= $tipo['total'] ?>,
                         <?php endforeach; ?>
                     ],
-                    backgroundColor: [
-                        '#28a745', '#007bff', '#6f42c1', '#fd7e14', '#20c997', '#e83e8c'
-                    ]
+                    backgroundColor: ['#28a745', '#007bff', '#6f42c1', '#fd7e14', '#20c997']
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'bottom'
+                    legend: { position: 'bottom' },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const value = context.raw;
+                                const percentage = ((value / total) * 100).toFixed(1);
+                                return `${context.label}: ${value} (${percentage}%)`;
+                            }
+                        }
                     }
                 }
             }
@@ -757,21 +711,24 @@ function formatearHora($hora) {
                             <?= $metodo['total'] ?>,
                         <?php endforeach; ?>
                     ],
-                    backgroundColor: [
-                        '#667eea', '#764ba2', '#f093fb', '#f5576c'
-                    ]
+                    backgroundColor: ['#667eea', '#764ba2', '#f093fb']
                 }]
             },
             options: {
                 responsive: true,
                 maintainAspectRatio: false,
                 plugins: {
-                    legend: {
-                        position: 'bottom'
-                    }
+                    legend: { position: 'bottom' }
                 }
             }
         });
+
+        // Auto-print si se solicita
+        <?php if (isset($_GET['print']) && $_GET['print'] == '1'): ?>
+        window.onload = function() {
+            window.print();
+        }
+        <?php endif; ?>
     </script>
 </body>
 </html>
