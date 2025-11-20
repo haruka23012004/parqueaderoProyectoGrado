@@ -109,6 +109,150 @@ $usuario = $resultado->fetch_assoc();
             border-radius: 50%;
             background: #3498db;
         }
+
+        /* ESTILOS PARA IMPRESIÓN DEL CARNET */
+        @media print {
+            body * {
+                visibility: hidden;
+                margin: 0 !important;
+                padding: 0 !important;
+            }
+            
+            #carnetImprimir,
+            #carnetImprimir * {
+                visibility: visible !important;
+            }
+            
+            #carnetImprimir {
+                position: absolute !important;
+                left: 0 !important;
+                top: 0 !important;
+                width: 100% !important;
+                height: 100% !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                border: none !important;
+                border-radius: 0 !important;
+                box-shadow: none !important;
+                background: white !important;
+                page-break-inside: avoid !important;
+                break-inside: avoid !important;
+            }
+            
+            .no-print,
+            .modal,
+            .navbar,
+            .container,
+            .btn {
+                display: none !important;
+            }
+        }
+
+        .carnet-container {
+            display: none;
+            max-width: 400px;
+            margin: 20px auto;
+            border: 2px solid #333;
+            border-radius: 15px;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            box-shadow: 0 10px 30px rgba(0,0,0,0.3);
+        }
+
+        .carnet-header {
+            background: rgba(0,0,0,0.2);
+            padding: 15px;
+            text-align: center;
+            border-radius: 13px 13px 0 0;
+            border-bottom: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .carnet-body {
+            padding: 25px;
+            background: white;
+            color: #333;
+            min-height: 450px;
+            display: flex;
+            flex-direction: column;
+            justify-content: space-between;
+        }
+
+        .carnet-photo {
+            width: 120px;
+            height: 120px;
+            border-radius: 10px;
+            border: 3px solid #667eea;
+            object-fit: cover;
+            margin: 0 auto 15px;
+            display: block;
+        }
+
+        .carnet-qr {
+            width: 120px;
+            height: 120px;
+            margin: 15px auto;
+            display: block;
+            border: 2px solid #ddd;
+            border-radius: 8px;
+            padding: 5px;
+            background: white;
+        }
+
+        .carnet-info {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .carnet-field {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 8px;
+            padding: 5px 0;
+            border-bottom: 1px solid #eee;
+            font-size: 14px;
+        }
+
+        .carnet-field strong {
+            color: #667eea;
+            font-weight: 600;
+        }
+
+        .carnet-footer {
+            background: rgba(0,0,0,0.2);
+            padding: 12px;
+            text-align: center;
+            border-radius: 0 0 13px 13px;
+            font-size: 0.8rem;
+            border-top: 2px solid rgba(255,255,255,0.3);
+        }
+
+        .carnet-title {
+            font-size: 1.1rem;
+            font-weight: bold;
+            margin-bottom: 5px;
+        }
+
+        .carnet-subtitle {
+            font-size: 0.9rem;
+            opacity: 0.9;
+        }
+
+        .user-name {
+            font-size: 1.3rem;
+            font-weight: bold;
+            color: #2c3e50;
+            margin-bottom: 10px;
+        }
+
+        .user-type {
+            background: #667eea;
+            color: white;
+            padding: 3px 10px;
+            border-radius: 15px;
+            font-size: 0.8rem;
+            display: inline-block;
+            margin-bottom: 10px;
+        }
     </style>
 </head>
 <body>
@@ -126,6 +270,7 @@ $usuario = $resultado->fetch_assoc();
             </a>
         </div>
 
+        <!-- Contenido principal (tu código existente) -->
         <div class="row">
             <!-- Columna Izquierda: Información Personal y Universitaria -->
             <div class="col-md-6">
@@ -293,20 +438,21 @@ $usuario = $resultado->fetch_assoc();
         </div>
 
         <!-- Botones de Acción -->
-            <div class="mt-4 d-flex gap-2 flex-wrap">
-                <a href="usuarios_aprobados.php" class="btn btn-secondary">
-                    <i class="fas fa-arrow-left me-1"></i> Volver
-                </a>
-                <a href="editar_usuario.php?id=<?= $usuario['id'] ?>" class="btn btn-warning">
-                    <i class="fas fa-edit me-1"></i> Editar Usuario
-                </a>
-                <button type="button" onclick="imprimirCarnet()" class="btn btn-success">
-                    <i class="fas fa-print me-1"></i> Imprimir Carnet
-                </button>
-                <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
-                    <i class="fas fa-trash me-1"></i> Eliminar Usuario
-                </button>
-            </div>
+        <div class="mt-4 d-flex gap-2 flex-wrap">
+            <a href="usuarios_aprobados.php" class="btn btn-secondary">
+                <i class="fas fa-arrow-left me-1"></i> Volver
+            </a>
+            <a href="editar_usuario.php?id=<?= $usuario['id'] ?>" class="btn btn-warning">
+                <i class="fas fa-edit me-1"></i> Editar Usuario
+            </a>
+            <button type="button" onclick="mostrarVistaPrevia()" class="btn btn-success">
+                <i class="fas fa-id-card me-1"></i> Imprimir Carnet
+            </button>
+            <button type="button" class="btn btn-danger" data-bs-toggle="modal" data-bs-target="#confirmDeleteModal">
+                <i class="fas fa-trash me-1"></i> Eliminar Usuario
+            </button>
+        </div>
+    </div>
 
     <!-- Modal de Confirmación para Eliminar -->
     <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
@@ -328,244 +474,106 @@ $usuario = $resultado->fetch_assoc();
         </div>
     </div>
 
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-
-<style>
-@media print {
-    body * {
-        visibility: hidden;
-        margin: 0 !important;
-        padding: 0 !important;
-    }
-    
-    #carnetImprimir,
-    #carnetImprimir * {
-        visibility: visible !important;
-    }
-    
-    #carnetImprimir {
-        position: fixed !important;
-        left: 50% !important;
-        top: 50% !important;
-        transform: translate(-50%, -50%) !important;
-        width: 400px !important;
-        height: auto !important;
-        margin: 0 !important;
-        padding: 0 !important;
-        border: 2px solid #333 !important;
-        border-radius: 15px !important;
-        box-shadow: none !important;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%) !important;
-        page-break-inside: avoid !important;
-        break-inside: avoid !important;
-    }
-    
-    .no-print,
-    .modal,
-    .navbar,
-    .container {
-        display: none !important;
-    }
-}
-
-.carnet-container {
-    display: none;
-    max-width: 400px;
-    margin: 20px auto;
-    border: 2px solid #333;
-    border-radius: 15px;
-    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-    color: white;
-    box-shadow: 0 10px 30px rgba(0,0,0,0.3);
-}
-
-.carnet-header {
-    background: rgba(0,0,0,0.2);
-    padding: 15px;
-    text-align: center;
-    border-radius: 13px 13px 0 0;
-}
-
-.carnet-body {
-    padding: 20px;
-    background: white;
-    color: #333;
-    min-height: 400px;
-}
-
-.carnet-photo {
-    width: 120px;
-    height: 120px;
-    border-radius: 10px;
-    border: 3px solid #667eea;
-    object-fit: cover;
-    margin: 0 auto 15px;
-    display: block;
-}
-
-.carnet-qr {
-    width: 100px;
-    height: 100px;
-    margin: 10px auto;
-    display: block;
-}
-
-.carnet-info {
-    text-align: center;
-    margin-bottom: 15px;
-}
-
-.carnet-field {
-    display: flex;
-    justify-content: space-between;
-    margin-bottom: 5px;
-    padding: 3px 0;
-    border-bottom: 1px solid #eee;
-}
-
-.carnet-field strong {
-    color: #667eea;
-}
-
-.carnet-footer {
-    background: rgba(0,0,0,0.2);
-    padding: 10px;
-    text-align: center;
-    border-radius: 0 0 13px 13px;
-    font-size: 0.8rem;
-}
-</style>
-
-<!-- Modal para vista previa del carnet -->
-<div class="modal fade" id="carnetModal" tabindex="-1" aria-labelledby="carnetModalLabel" aria-hidden="true">
-    <div class="modal-dialog modal-md">
-        <div class="modal-content">
-            <div class="modal-header">
-                <h5 class="modal-title" id="carnetModalLabel">Vista Previa del Carnet</h5>
-                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-            </div>
-            <div class="modal-body text-center">
-                <p class="text-muted mb-3">Esta es una vista previa del carnet. Use el botón imprimir para generar la versión física.</p>
+    <!-- CARNET PARA IMPRIMIR (siempre en el DOM pero oculto) -->
+    <div class="carnet-container" id="carnetImprimir">
+        <!-- Encabezado del Carnet -->
+        <div class="carnet-header">
+            <div class="carnet-title">UNIVERSIDAD DE LA GUAJIRA</div>
+            <div class="carnet-subtitle">Sistema de Parqueadero</div>
+        </div>
+        
+        <!-- Cuerpo del Carnet -->
+        <div class="carnet-body">
+            <!-- Foto del Usuario -->
+            <div>
+                <?php if (!empty($usuario['foto_usuario'])): ?>
+                <img src="../<?= htmlspecialchars($usuario['foto_usuario']) ?>" 
+                     alt="Foto" class="carnet-photo">
+                <?php else: ?>
+                <div class="carnet-photo bg-light d-flex align-items-center justify-content-center">
+                    <i class="fas fa-user fa-3x text-muted"></i>
+                </div>
+                <?php endif; ?>
                 
-                <!-- Carnet que se imprimirá -->
-                <div class="carnet-container" id="carnetImprimir">
-                    <!-- Encabezado del Carnet -->
-                    <div class="carnet-header">
-                        <h4 class="mb-1">UNIVERSIDAD DE LA GUAJIRA</h4>
-                        <p class="mb-0" style="font-size: 0.9rem;">Sistema de Parqueadero</p>
-                    </div>
-                    
-                    <!-- Cuerpo del Carnet -->
-                    <div class="carnet-body">
-                        <!-- Foto del Usuario -->
-                        <?php if (!empty($usuario['foto_usuario'])): ?>
-                        <img src="../<?= htmlspecialchars($usuario['foto_usuario']) ?>" 
-                             alt="Foto" class="carnet-photo">
-                        <?php else: ?>
-                        <div class="carnet-photo bg-light d-flex align-items-center justify-content-center">
-                            <i class="fas fa-user fa-3x text-muted"></i>
-                        </div>
-                        <?php endif; ?>
-                        
-                        <!-- Información Principal -->
-                        <div class="carnet-info">
-                            <h5 class="mb-2" style="color: #667eea;"><?= htmlspecialchars($usuario['nombre_completo']) ?></h5>
-                            <p class="mb-1"><strong>Tipo:</strong> <?= htmlspecialchars(ucfirst($usuario['tipo'])) ?></p>
-                            <p class="mb-1"><strong>Cédula:</strong> <?= htmlspecialchars($usuario['cedula']) ?></p>
-                        </div>
-                        
-                        <!-- Información del Vehículo -->
-                        <div class="carnet-info">
-                            <h6 style="color: #667eea; border-bottom: 1px solid #667eea; padding-bottom: 5px;">Vehículo</h6>
-                            <div class="carnet-field">
-                                <span>Placa:</span>
-                                <strong><?= htmlspecialchars($usuario['placa'] ?? 'N/A') ?></strong>
-                            </div>
-                            <div class="carnet-field">
-                                <span>Tipo:</span>
-                                <strong><?= htmlspecialchars(ucfirst($usuario['tipo_vehiculo'] ?? 'N/A')) ?></strong>
-                            </div>
-                            <div class="carnet-field">
-                                <span>Color:</span>
-                                <strong><?= htmlspecialchars($usuario['color'] ?? 'N/A') ?></strong>
-                            </div>
-                        </div>
-                        
-                        <!-- Código QR -->
-                        <?php if (!empty($usuario['qr_code'])): ?>
-                        <div class="carnet-info">
-                            <img src="../<?= htmlspecialchars($usuario['qr_code']) ?>" 
-                                 alt="QR Code" class="carnet-qr">
-                            <p class="small text-muted mt-1">Código de acceso</p>
-                        </div>
-                        <?php endif; ?>
-                    </div>
-                    
-                    <!-- Pie del Carnet -->
-                    <div class="carnet-footer">
-                        <p class="mb-0">Válido hasta: <?= date('d/m/Y', strtotime('+1 year')) ?></p>
+                <!-- Información Principal -->
+                <div class="carnet-info">
+                    <div class="user-name"><?= htmlspecialchars($usuario['nombre_completo']) ?></div>
+                    <div class="user-type"><?= htmlspecialchars(ucfirst($usuario['tipo'])) ?></div>
+                    <div class="carnet-field">
+                        <span>Cédula:</span>
+                        <strong><?= htmlspecialchars($usuario['cedula']) ?></strong>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cerrar</button>
-                <button type="button" class="btn btn-success" onclick="imprimirCarnetDirecto()">
-                    <i class="fas fa-print me-1"></i> Imprimir Carnet
-                </button>
+            
+            <!-- Información del Vehículo -->
+            <div>
+                <div class="carnet-info">
+                    <h6 style="color: #667eea; border-bottom: 1px solid #667eea; padding-bottom: 5px; margin-bottom: 15px;">Vehículo</h6>
+                    <div class="carnet-field">
+                        <span>Placa:</span>
+                        <strong><?= htmlspecialchars($usuario['placa'] ?? 'N/A') ?></strong>
+                    </div>
+                    <div class="carnet-field">
+                        <span>Tipo:</span>
+                        <strong><?= htmlspecialchars(ucfirst($usuario['tipo_vehiculo'] ?? 'N/A')) ?></strong>
+                    </div>
+                    <div class="carnet-field">
+                        <span>Color:</span>
+                        <strong><?= htmlspecialchars($usuario['color'] ?? 'N/A') ?></strong>
+                    </div>
+                </div>
+                
+                <!-- Código QR -->
+                <?php if (!empty($usuario['qr_code'])): ?>
+                <div class="carnet-info">
+                    <img src="../<?= htmlspecialchars($usuario['qr_code']) ?>" 
+                         alt="QR Code" class="carnet-qr">
+                    <p class="small text-muted mt-1">Código de acceso al parqueadero</p>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
+        
+        <!-- Pie del Carnet -->
+        <div class="carnet-footer">
+            <p class="mb-0">Válido hasta: <?= date('d/m/Y', strtotime('+1 year')) ?> | Carnet No: <?= $usuario['id'] ?></p>
+        </div>
     </div>
-</div>
 
-<script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
-<script>
-function imprimirCarnet() {
-    // Mostrar modal con vista previa
-    var carnetModal = new bootstrap.Modal(document.getElementById('carnetModal'));
-    carnetModal.show();
-}
-
-function imprimirCarnetDirecto() {
-    // Ocultar modal primero
-    var carnetModal = bootstrap.Modal.getInstance(document.getElementById('carnetModal'));
-    carnetModal.hide();
-    
-    // Pequeña pausa para que se cierre el modal
-    setTimeout(function() {
-        // Mostrar el carnet
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+    function mostrarVistaPrevia() {
+        // Mostrar el carnet para vista previa
         var carnet = document.getElementById('carnetImprimir');
         carnet.style.display = 'block';
         
-        // Forzar reflow para asegurar que se muestre
-        carnet.offsetHeight;
-        
-        // Imprimir
-        window.print();
-    }, 300);
-}
-
-// Cuando se cierra la impresión, ocultar el carnet
-window.addEventListener('afterprint', function() {
-    var carnet = document.getElementById('carnetImprimir');
-    if (carnet) {
-        carnet.style.display = 'none';
+        // Pequeña pausa para que se renderice
+        setTimeout(function() {
+            window.print();
+        }, 500);
     }
-});
 
-// También ocultar el carnet si se cancela la impresión
-window.addEventListener('beforeprint', function() {
-    console.log('Iniciando impresión...');
-});
-
-// Manejar la tecla ESC para salir del modo impresión
-document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') {
+    // Ocultar el carnet después de imprimir
+    window.addEventListener('afterprint', function() {
         var carnet = document.getElementById('carnetImprimir');
-        if (carnet && carnet.style.display === 'block') {
+        if (carnet) {
             carnet.style.display = 'none';
         }
-    }
-});
-</script>
+    });
+
+    // También ocultar si se cancela la impresión
+    window.addEventListener('beforeprint', function() {
+        console.log('Preparando para imprimir carnet...');
+    });
+
+    // Asegurarse de que el carnet esté oculto al cargar la página
+    document.addEventListener('DOMContentLoaded', function() {
+        var carnet = document.getElementById('carnetImprimir');
+        if (carnet) {
+            carnet.style.display = 'none';
+        }
+    });
+    </script>
 </body>
 </html>
