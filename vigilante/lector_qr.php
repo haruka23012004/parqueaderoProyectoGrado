@@ -4,7 +4,7 @@ require '../includes/conexion.php';
 
 // Verificar que sea vigilante O administrador
 if (!estaAutenticado() || ($_SESSION['rol_nombre'] != 'vigilante' && $_SESSION['rol_nombre'] != 'administrador_principal')) {
-    header('Location: /parqueaderoProyectoGrado/acceso/login.php');
+    header('Location: /parqueaderoProyectoGrado/paneles/administrador.php');
     exit();
 }
 ?>
