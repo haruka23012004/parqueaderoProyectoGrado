@@ -234,7 +234,7 @@ if ($_POST['tipo_vehiculo'] !== 'bicicleta' && empty($_POST['placa'])) {
     mostrarError("Error: La placa es obligatoria para este tipo de vehículo");
 }
 
-// Si es bicicleta y no tiene placa, generar una unica 
+// Si es bicicleta y no tiene placa, generar una única 
 $placa = $_POST['placa'] ?? null;
 if ($_POST['tipo_vehiculo'] === 'bicicleta' && empty($placa)) {
     $placa = 'BIC-' . substr(md5($_POST['cedula'] . time()), 0, 8);
@@ -250,9 +250,19 @@ if (!empty($placa) && $placa !== $_POST['placa']) {
     }
 }
 
-// Validaciones condicionales
-if (in_array($_POST['tipo'], ['estudiante']) && empty($_POST['codigo_universitario'])) {
-    mostrarError("Error: El código universitario es obligatorio para este tipo de usuario");
+// =============================================
+// VALIDACIONES CONDICIONALES PARA ESTUDIANTES
+// =============================================
+if ($_POST['tipo'] === 'estudiante') {
+    if (empty(trim($_POST['codigo_universitario']))) {
+        mostrarError("Error: El código universitario es obligatorio para estudiantes");
+    }
+    if (empty(trim($_POST['facultad']))) {
+        mostrarError("Error: La facultad es obligatoria para estudiantes");
+    }
+    if (empty(trim($_POST['programa_academico']))) {
+        mostrarError("Error: El programa académico es obligatorio para estudiantes");
+    }
 }
 
 // =============================================
@@ -322,21 +332,34 @@ if (!$foto_vehiculo) {
 }
 
 // =============================================
-// 5. REGISTRO EN BASE DE DATOS
+// 5. PREPARAR DATOS PARA LA BASE DE DATOS
+// =============================================
+$tipo = $_POST['tipo'];
+
+// Preparar datos universitarios - SOLO para estudiantes
+if ($tipo === 'estudiante') {
+    $codigo = !empty(trim($_POST['codigo_universitario'])) ? trim($_POST['codigo_universitario']) : null;
+    $facultad = !empty(trim($_POST['facultad'])) ? trim($_POST['facultad']) : null;
+    $semestre = !empty(trim($_POST['semestre'])) ? trim($_POST['semestre']) : null;
+    $programa = !empty(trim($_POST['programa_academico'])) ? trim($_POST['programa_academico']) : null;
+} else {
+    // Para otros tipos de usuario, los campos universitarios son NULL
+    $codigo = null;
+    $facultad = null;
+    $semestre = null;
+    $programa = null;
+}
+
+$nombre = $_POST['nombre_completo'];
+$cedula = $_POST['cedula'];
+$email = $_POST['email'];
+
+// =============================================
+// 6. REGISTRO EN BASE DE DATOS
 // =============================================
 try {
     // Iniciar transacción
     $conn->begin_transaction();
-
-    // Preparar datos para usuario
-    $tipo = $_POST['tipo'];
-    $codigo = $_POST['codigo_universitario'] ?? null;
-    $nombre = $_POST['nombre_completo'];
-    $cedula = $_POST['cedula'];
-    $email = $_POST['email'];
-    $facultad = $_POST['facultad'] ?? null;
-    $semestre = $_POST['semestre'] ?? null;
-    $programa = $_POST['programa_academico'] ?? null;
 
     // Insertar usuario
     $stmt_usuario = $conn->prepare("
@@ -370,7 +393,7 @@ try {
     $marca = $_POST['marca_vehiculo'] ?? null;
     $color = $_POST['color_vehiculo'] ?? null;
 
-    // Insertar vehículo (AHORA CON FOTO)
+    // Insertar vehículo
     $stmt_vehiculo = $conn->prepare("
         INSERT INTO vehiculos (
             usuario_id, tipo, placa, marca, color, foto_vehiculo
