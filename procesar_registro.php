@@ -3,7 +3,7 @@ require __DIR__ . '/includes/conexion.php';
 
 // Verificacion de la conexion
 if (!isset($conn) || $conn->connect_error) {
-    mostrarError("Error crítico: No se pudo conectar a la base de datos");
+    mostrarError("Lo sentimos, hay un problema técnico en este momento. Por favor, intente más tarde.");
 }
 
 // =============================================
@@ -129,7 +129,7 @@ function mostrarError($mensaje) {
     <body>
         <div class='modal-error'>
             <div class='modal-header'>
-                <h2><i class='fas fa-exclamation-triangle'></i> Error</h2>
+                <h2><i class='fas fa-exclamation-triangle'></i> Error en el Registro</h2>
                 <button class='close-btn' onclick='volverAlRegistro()'>
                     <i class='fas fa-times'></i>
                 </button>
@@ -184,12 +184,12 @@ $max_tamano_imagen = 2 * 1024 * 1024; // 2MB
 // =============================================
 // Verificar método de envío
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-    mostrarError("Error: Método no permitido");
+    mostrarError("Ha ocurrido un error inesperado. Por favor, recargue la página e intente nuevamente.");
 }
 
 // Validar consentimiento
 if (!isset($_POST['consentimiento_imagen'])) {
-    mostrarError("Debe aceptar el tratamiento de imágenes");
+    mostrarError("Debe aceptar el consentimiento para el tratamiento de imágenes para continuar con el registro.");
 }
 
 // Campos obligatorios
@@ -203,19 +203,19 @@ $campos_requeridos = [
 
 foreach ($campos_requeridos as $campo => $nombre) {
     if (empty($_POST[$campo])) {
-        mostrarError("Error: El campo <strong>$nombre</strong> es obligatorio");
+        mostrarError("El campo <strong>$nombre</strong> es obligatorio. Por favor, complete toda la información requerida.");
     }
 }
 
 // Validar tipo de usuario
 $tipos_permitidos = ['estudiante', 'profesor', 'administrativo', 'visitante'];
 if (!in_array($_POST['tipo'], $tipos_permitidos)) {
-    mostrarError("Error: Tipo de usuario no válido");
+    mostrarError("El tipo de usuario seleccionado no es válido. Por favor, seleccione una opción de la lista.");
 }
 
 // Validar email
 if (!filter_var($_POST['email'], FILTER_VALIDATE_EMAIL)) {
-    mostrarError("Error: Formato de email inválido<br><br>Por favor ingrese un email válido");
+    mostrarError("El formato del correo electrónico no es válido. Por favor, ingrese un email correcto como: ejemplo@correo.com");
 }
 
 // =============================================
@@ -226,12 +226,12 @@ $check_cedula = $conn->prepare("SELECT id FROM usuarios_parqueadero WHERE cedula
 $check_cedula->bind_param("s", $_POST['cedula']);
 $check_cedula->execute();
 if ($check_cedula->get_result()->num_rows > 0) {
-    mostrarError("Error: La cédula <strong>{$_POST['cedula']}</strong> ya está registrada en el sistema");
+    mostrarError("La cédula <strong>{$_POST['cedula']}</strong> ya se encuentra registrada en nuestro sistema. Si cree que esto es un error, contacte al administrador.");
 }
 
 // Validar placa según tipo de vehículo
 if ($_POST['tipo_vehiculo'] !== 'bicicleta' && empty($_POST['placa'])) {
-    mostrarError("Error: La placa es obligatoria para este tipo de vehículo");
+    mostrarError("El número de placa es obligatorio para este tipo de vehículo. Por favor, ingrese la placa de su vehículo.");
 }
 
 // Si es bicicleta y no tiene placa, generar una única 
@@ -240,13 +240,13 @@ if ($_POST['tipo_vehiculo'] === 'bicicleta' && empty($placa)) {
     $placa = 'BIC-' . substr(md5($_POST['cedula'] . time()), 0, 8);
 }
 
-// Verificar si la placa ya existe (excepto para bicicletas generadas)
-if (!empty($placa) && $placa !== $_POST['placa']) {
+// Verificar si la placa ya existe
+if (!empty($placa)) {
     $check_placa = $conn->prepare("SELECT id FROM vehiculos WHERE placa = ?");
     $check_placa->bind_param("s", $placa);
     $check_placa->execute();
     if ($check_placa->get_result()->num_rows > 0) {
-        mostrarError("Error: La placa <strong>$placa</strong> ya está registrada en el sistema");
+        mostrarError("La placa <strong>$placa</strong> ya está registrada en nuestro sistema. Por favor, verifique el número de placa o contacte al administrador si cree que hay un error.");
     }
 }
 
@@ -255,13 +255,13 @@ if (!empty($placa) && $placa !== $_POST['placa']) {
 // =============================================
 if ($_POST['tipo'] === 'estudiante') {
     if (empty(trim($_POST['codigo_universitario']))) {
-        mostrarError("Error: El código universitario es obligatorio para estudiantes");
+        mostrarError("El código universitario es obligatorio para estudiantes. Por favor, ingrese su código estudiantil.");
     }
     if (empty(trim($_POST['facultad']))) {
-        mostrarError("Error: La facultad es obligatoria para estudiantes");
+        mostrarError("La facultad es obligatoria para estudiantes. Por favor, seleccione su facultad.");
     }
     if (empty(trim($_POST['programa_academico']))) {
-        mostrarError("Error: El programa académico es obligatorio para estudiantes");
+        mostrarError("El programa académico es obligatorio para estudiantes. Por favor, seleccione su programa de estudios.");
     }
 }
 
@@ -277,12 +277,13 @@ function procesarImagen($archivo, $cedula, $prefijo, $ruta_imagenes, $extensione
         // Validar tipo de archivo
         $extension = strtolower(pathinfo($archivo['name'], PATHINFO_EXTENSION));
         if (!in_array($extension, $extensiones_permitidas)) {
-            mostrarError("Error: Solo se permiten imágenes JPG, JPEG o PNG<br><br>Formato detectado: .$extension");
+            mostrarError("Solo se permiten imágenes en formato JPG, JPEG o PNG. El archivo que intentó subir tiene formato .$extension. Por favor, convierta su imagen a uno de los formatos permitidos.");
         }
 
         // Validar tamaño
         if ($archivo['size'] > $max_tamano_imagen) {
-            mostrarError("Error: La imagen no debe exceder 2MB<br><br>Tamaño actual: " . round($archivo['size'] / 1024 / 1024, 2) . " MB");
+            $tamano_mb = round($archivo['size'] / 1024 / 1024, 2);
+            mostrarError("La imagen es demasiado grande. El tamaño máximo permitido es 2MB. Su archivo pesa $tamano_mb MB. Por favor, comprima o reduzca el tamaño de la imagen.");
         }
 
         // Crear nombre único
@@ -292,13 +293,13 @@ function procesarImagen($archivo, $cedula, $prefijo, $ruta_imagenes, $extensione
         // Verificar y crear carpeta si no existe
         if (!file_exists($ruta_imagenes)) {
             if (!mkdir($ruta_imagenes, 0755, true)) {
-                mostrarError("Error: No se pudo crear la carpeta de imágenes<br><br>Contacte al administrador del sistema");
+                mostrarError("No se pudo completar el registro en este momento. Por favor, contacte al administrador del sistema.");
             }
         }
 
         // Mover archivo
         if (!move_uploaded_file($archivo['tmp_name'], $ruta_foto)) {
-            mostrarError("Error: No se pudo guardar la imagen<br><br>Verifique los permisos de la carpeta o contacte al administrador");
+            mostrarError("No se pudo guardar la imagen. Verifique que tenga permisos suficientes o contacte al administrador del sistema.");
         }
 
         return 'assets/img/usuarios/' . $nombre_foto; // Ruta relativa
@@ -328,7 +329,7 @@ $foto_vehiculo = procesarImagen(
 
 // Verificar que se subió la foto del vehículo
 if (!$foto_vehiculo) {
-    mostrarError("Error: La foto del vehículo es obligatoria<br><br>Por favor, suba una fotografía clara donde sea visible la placa");
+    mostrarError("La fotografía del vehículo es obligatoria. Por favor, suba una fotografía clara donde sea visible la placa del vehículo.");
 }
 
 // =============================================
@@ -383,7 +384,15 @@ try {
     );
 
     if (!$stmt_usuario->execute()) {
-        throw new Exception("Error al registrar usuario: " . $stmt_usuario->error);
+        // Manejar errores específicos de la base de datos
+        if (strpos($stmt_usuario->error, 'Duplicate entry') !== false) {
+            if (strpos($stmt_usuario->error, 'codigo_universitario') !== false) {
+                throw new Exception("El código universitario ingresado ya está registrado en el sistema. Por favor, verifique su código o contacte al administrador.");
+            } elseif (strpos($stmt_usuario->error, 'email') !== false) {
+                throw new Exception("El correo electrónico ingresado ya está registrado en el sistema. Por favor, utilice otro email o recupere su cuenta.");
+            }
+        }
+        throw new Exception("No se pudo completar el registro en este momento. Por favor, intente nuevamente.");
     }
 
     $usuario_id = $conn->insert_id;
@@ -411,7 +420,11 @@ try {
     );
 
     if (!$stmt_vehiculo->execute()) {
-        throw new Exception("Error al registrar vehículo: " . $stmt_vehiculo->error);
+        // Manejar errores específicos de la base de datos para vehículos
+        if (strpos($stmt_vehiculo->error, 'Duplicate entry') !== false && strpos($stmt_vehiculo->error, 'placa') !== false) {
+            throw new Exception("El número de placa ingresado ya está registrado en nuestro sistema. Por favor, verifique la placa de su vehículo.");
+        }
+        throw new Exception("No se pudo registrar el vehículo en este momento. Por favor, intente nuevamente.");
     }
 
     // Confirmar transacción
@@ -433,6 +446,6 @@ try {
         unlink(__DIR__ . '/' . $foto_vehiculo);
     }
 
-    mostrarError("Error en el sistema: " . $e->getMessage() . "<br><br>Por favor, intente nuevamente");
+    mostrarError($e->getMessage());
 }
 ?>
