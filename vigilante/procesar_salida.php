@@ -46,9 +46,30 @@ try {
     
     $userData = $result->fetch_assoc();
 
+     // --- INICIO DE LA VALIDACIÓN PARA EVITAR SALIDAS DUPLICADAS ---
+    $checkQuery = "SELECT 
+                    (SELECT COUNT(*) FROM registros_acceso WHERE vehiculo_id = ? AND parqueadero_id = ? AND tipo_movimiento = 'entrada') as total_entradas,
+                    (SELECT COUNT(*) FROM registros_acceso WHERE vehiculo_id = ? AND parqueadero_id = ? AND tipo_movimiento = 'salida') as total_salidas";
+    
+    $checkStmt = $conn->prepare($checkQuery);
+    
+    // Los 4 signos de interrogación corresponden a los 4 parámetros (vehiculo_id y parqueadero_id se repiten dos veces)
+    $checkStmt->bind_param("iiii", $userData['vehiculo_id'], $parqueadero_id, $userData['vehiculo_id'], $parqueadero_id);
+    
+    $checkStmt->execute();
+    $checkResult = $checkStmt->get_result()->fetch_assoc();
+
+    // Si las entradas son menores o iguales a las salidas, significa que el carro ya salió o nunca entró
+    if ($checkResult['total_entradas'] <= $checkResult['total_salidas']) {
+        echo json_encode(['success' => false, 'message' => 'Error: No se puede registrar la salida. El vehículo no se encuentra dentro del parqueadero (no registra entrada activa).']);
+        exit(); // Detiene el script aquí y no ejecuta el INSERT
+    }
+    // --- FIN DE LA VALIDACIÓN ---
+
     // Registrar la salida en la tabla registros_acceso
     $insertQuery = "INSERT INTO registros_acceso (usuario_id, vehiculo_id, parqueadero_id, tipo_movimiento, fecha_hora) 
                     VALUES (?, ?, ?, 'salida', NOW())";
+    // ... el resto de tu código sigue igual ...
     
     $insertStmt = $conn->prepare($insertQuery);
     $insertStmt->bind_param("iii", $usuario_id, $userData['vehiculo_id'], $parqueadero_id);
