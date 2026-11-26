@@ -183,12 +183,12 @@ $solicitud = $resultado->fetch_assoc();
             <a href="aprobar_usuario.php?id=<?= $solicitud['id'] ?>" 
                class="btn btn-success" 
                onclick="return confirm('¿Estás seguro de aprobar esta solicitud?')">
-               ✅ Aprobar Usuario
+                Aprobar Usuario
             </a>
             <a href="rechazar_usuario.php?id=<?= $solicitud['id'] ?>" 
                class="btn btn-danger"
                onclick="return confirm('¿Estás seguro de rechazar esta solicitud?')">
-               ❌ Rechazar Usuario
+               Rechazar Usuario
             </a>
             <?php else: ?>
             <span class="badge bg-<?= $solicitud['estado'] === 'aprobado' ? 'success' : 'danger' ?> fs-6">
