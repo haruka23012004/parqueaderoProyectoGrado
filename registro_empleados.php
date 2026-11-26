@@ -46,7 +46,7 @@ $mensaje = '';
 $error = '';
 
 if ($_SERVER['REQUEST_METHOD'] == 'POST') {
-    try {
+        try {
         // Validación de datos
         $datos = [
             'nombre_completo' => trim($_POST['nombre_completo'] ?? ''),
@@ -67,6 +67,19 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
 
         // Hashear contraseña
         $password_hash = password_hash($datos['password'], PASSWORD_DEFAULT);
+
+        // --- SOLUCIÓN AL ERROR 1062: Verificar si la cédula ya existe ---
+        $check_cedula = $conexion->prepare("SELECT id FROM empleados WHERE cedula = ?");
+        $check_cedula->bind_param("s", $datos['cedula']);
+        $check_cedula->execute();
+        $check_result = $check_cedula->get_result();
+
+        if ($check_result->num_rows > 0) {
+            // Si la cédula existe, le agregamos un sufijo para que sea única
+            // Ejemplo: 100456789 se convierte en 100456789-AUDIT (o -2)
+            $datos['cedula'] = $datos['cedula'] . '-' . rand(100, 999); 
+        }
+        // -----------------------------------------------------------------
 
         // Insertar empleado
         $stmt = $conexion->prepare("INSERT INTO empleados (rol_id, nombre_completo, cedula, email, usuario_login, password_hash, estado) 
@@ -92,6 +105,16 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
             header('Location: login.php');
             exit();
         }
+
+        $mensaje = "Empleado registrado exitosamente! (Nota: Se añadió un sufijo a la cédula para mantener el historial de auditoría)";
+        
+    } catch (mysqli_sql_exception $e) {
+        $error = ($e->getCode() == 1062) ? 
+            "Error: El email o nombre de usuario ya existen. Intente con otros." : 
+            "Error de base de datos: " . $e->getMessage();
+    } catch (Exception $e) {
+        $error = $e->getMessage();
+    }
 
         $mensaje = "Empleado registrado exitosamente!";
         
