@@ -69,13 +69,40 @@ if ($_SERVER['REQUEST_METHOD'] == 'POST') {
         $password_hash = password_hash($datos['password'], PASSWORD_DEFAULT);
 
         // Insertar empleado
+                // --- INICIO DE LA VALIDACIÓN DE CÉDULA PARA AUDITORÍA ---
+        $cedula_final = $datos['cedula'];
+        
+        // Verificamos si la cédula ya existe en la base de datos
+        $check_cedula = $conexion->prepare("SELECT id, estado FROM empleados WHERE cedula = ?");
+        $check_cedula->bind_param("s", $datos['cedula']);
+        $check_cedula->execute();
+        $check_result = $check_cedula->get_result();
+
+        if ($check_result->num_rows > 0) {
+            $usuario_existente = $check_result->fetch_assoc();
+            
+            // Si está ACTIVO, no lo dejamos crear
+            if ($usuario_existente['estado'] === 'activo') {
+                throw new Exception("Error: Ya existe un empleado ACTIVO con esta cédula. Inactívelo o suspéndalo primero.");
+            } else {
+                // Si está inactivo o suspendido, le agregamos un sufijo a la cédula para que MySQL lo acepte
+                // Pero el nombre de usuario y el correo también deben ser únicos, así que les agregamos un sufijo
+                $sufijo = rand(10, 99);
+                $cedula_final = $datos['cedula'] . '-AUDIT' . $sufijo;
+                $datos['email'] = 'audit' . $sufijo . '_' . $datos['email'];
+                $datos['usuario_login'] = $datos['usuario_login'] . '_' . $sufijo;
+            }
+        }
+        // --- FIN DE LA VALIDACIÓN ---
+
+        // Insertar empleado (usando la cédula_final)
         $stmt = $conexion->prepare("INSERT INTO empleados (rol_id, nombre_completo, cedula, email, usuario_login, password_hash, estado) 
                                    VALUES (?, ?, ?, ?, ?, ?, ?)");
         
         $stmt->bind_param("issssss", 
             $datos['rol_id'],
             $datos['nombre_completo'],
-            $datos['cedula'],
+            $cedula_final, // <--- AQUÍ USAMOS LA CÉDULA MODIFICADA
             $datos['email'],
             $datos['usuario_login'],
             $password_hash,
